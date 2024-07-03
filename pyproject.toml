@@ -1,0 +1,55 @@
+[build-system]
+requires = [
+    "setuptools>=45",
+    "setuptools_scm>=6.2",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "testing-artefacts-pharmaco-multipath"
+authors = [
+  { name = "Priesemann Group"}
+]
+description = "Testing artefacts in pharmaceutically-controlled multi-pathogen systems: a modelling study."
+readme = "README.md"
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+
+dynamic = ["version", "dependencies"]
+requires-python = '>=3.8.1'
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.optional-dependencies]
+dev = [
+    "numpy",
+    "matplotlib",
+    "ipywidgets",
+    "scipy",
+    "pandas",
+    "path",
+    "requests",
+    "seaborn",
+    "scikit-learn",
+    "mplcursors",
+]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+
+[tool.setuptools_scm]
+write_to = "testing-artefacts-pharmaco-multipath/_version.py"
