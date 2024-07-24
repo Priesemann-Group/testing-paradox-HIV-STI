@@ -8,3 +8,6 @@ requests
 seaborn
 scikit-learn
 mplcursors
+jax
+diffrax
+icomo

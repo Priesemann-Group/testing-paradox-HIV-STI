@@ -42,6 +42,9 @@ dev = [
     "seaborn",
     "scikit-learn",
     "mplcursors",
+    "jax",
+    "diffrax",
+    "icomo"
 ]
 
 [tool.black]
