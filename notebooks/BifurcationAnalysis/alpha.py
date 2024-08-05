@@ -30,7 +30,7 @@ alpha_bifurcation = (lambda_o + mu) / (psi * (lambda_o + mu) / b + (1 - psi))
 
 # Calculate the critical points
 alpha_C_DF = a + b
-alpha_det = (-a*b)/(b*(psi-1)-a*psi)
+alpha_det = (a*b)/(psi*a+b*(1-psi))
 
 # Range for alpha
 alpha_values = np.linspace(0.1, 1, 500)
