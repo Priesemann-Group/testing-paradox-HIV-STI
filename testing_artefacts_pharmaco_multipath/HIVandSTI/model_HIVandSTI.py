@@ -29,19 +29,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Function to calculate the modulating factor 'm' based on provided arguments
-def m(args):
+def m(y, args): # TODO: update to new eq.
     logger.debug("Calculating modulating factor 'm'")
     return args["m_max"] - args["m_max"] / args["H_thres"] * args[
         "m_eps"
     ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - y["H"]) / args["m_eps"]))
 
 # Function to calculate the testing rate of STI
-def lambda_STI(args):
+def lambda_STI(y, args):
     logger.debug("Calculating testing rate of STI")
     return (
         args["lambda_0_a"]  # Baseline test rate
         + args["c"] # contacts
-        * (1 - m(args))
+        * (1 - m(y, args))
         * args["beta_HIV"]
         * args["H"]
         * (1 - args["P_HIV"])  # HIV dependent term
@@ -50,18 +50,19 @@ def lambda_STI(args):
     )
 
 # Function to calculate STI infection rate
-def beta_STI(args):
+def beta_STI(y,args):
     logger.debug("Calculating beta_STI")
-    return 
+    return args["beta_0_STI"] * ((1-m(y,args))*(1-y["P"])+y["P"])
 
 # Function to calculate HIV infection rate
-def beta_HIV(args):
+def beta_HIV(y, args):
     logger.debug("Calculating beta_HIV")
-    return
+    return args["beta_0_HIV"] * (1 - m(y, args))
 
 # Function to calculate effective [TODO: name?]
-def phi_H_eff(args):
+def phi_H_eff(y,args):
     logger.debug("Calculating phi_H_eff")
+    return y["phi_H"]*(y["S"]+y["P"]) # TODO: S_STI or S_HIV?
 
 
 # Main model function that defines the differential equations of the system
@@ -70,11 +71,11 @@ def model(t, y, args):
     cm = icomo.CompModel(y)  # Initialize the compartmental model
 
     # Basic HIV dynamics
-    cm.flow("S_HIV", "E_HIV", beta_HIV(args)*"I_HIV")  # Susceptible to exposed
+    cm.flow("S_HIV", "E_HIV", beta_HIV(y, args)*"I_HIV")  # Susceptible to exposed
     cm.flow("E_HIV", "I_HIV", args["rho"])  # Exposed to infected
     cm.flow("I_HIV", "T_HIV", args["lambda_S"])  # Infected to tested and treatment
     cm.flow("T_HIV", "I_HIV", args["nu"]) # Testes and treated to infected, dropout/ need of new testing
-    cm.flow("P", "S_HIV", args["alpha"]*(phi_H_eff(args)/y["P"]+1))  # Protected to tested and treatment
+    cm.flow("P", "S_HIV", args["alpha"]*(phi_H_eff(y,args)/y["P"]+1))  # Protected to tested and treatment
 
     # Vital dynamics HIV (natural death or other forms of removal)
     cm.flow("E_HIV", "S_HIV", args["mu"])  # Death/removal from exposed
@@ -83,11 +84,11 @@ def model(t, y, args):
     cm.flow("P", "S_HIV", args["mu"])  # Death/removal from protected
 
     # Basic STI dynamics
-    cm.flow("S_STI", "Ia_STI", args["psi"]*beta_STI(args)*(y["Ia_STI"]+y["Is_STI"]))  # Susceptible to asymptomatic
-    cm.flow("S_STI", "Is_STI", (1-args["psi"])*beta_STI(args)*(y["Ia_STI"]+y["Is_STI"]))  # Susceptible to symptomatic
+    cm.flow("S_STI", "Ia_STI", args["psi"]*beta_STI(y,args)*(y["Ia_STI"]+y["Is_STI"]))  # Susceptible to asymptomatic
+    cm.flow("S_STI", "Is_STI", (1-args["psi"])*beta_STI(y,args)*(y["Ia_STI"]+y["Is_STI"]))  # Susceptible to symptomatic
     cm.flow("Ia_STI", "S_STI", args["gamma_STI"])  # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia_STI", "T_STI", )  # Asymptomatic to tested and treatment
-    cm.flow("Is_STI", "T_STI", )  # Symptomatic to tested and treatment
+    cm.flow("Ia_STI", "T_STI", lambda_STI(y, args))  # Asymptomatic to tested and treatment
+    cm.flow("Is_STI", "T_STI", lambda_STI(y, args))  # Symptomatic to tested and treatment
     cm.flow("T_STI", "S_STI", args["gammaT_STI"])  # Treatment to susceptible (immunity loss)
 
     # Vital dynamics (natural death or other forms of removal)
@@ -95,12 +96,12 @@ def model(t, y, args):
     cm.flow("Is_STI", "S_STI", args["mu"])  # Death/removal from symptomatic
     cm.flow("T_STI", "S_STI", args["mu"])  # Death/removal from treatment
 
-    # Hazard dynamics
+    # Hazard dynamics # TODO: check if implemented correctly
     h, H = icomo.delayed_copy(y["I_HIV"], [y["h"], y["H"]], args["tau"])
     cm._add_dy_to_comp("h", h)
     cm._add_dy_to_comp("H", H)
 
-    # phi_H
+    # phi_H # TODO: check if implemented correctly
     cm._add_dy_to_comp("phi_H", args["r"]*y["phi_H"]*(1-y["phi_H"]/args["phi_max"]))
 
     # Return the differential changes
