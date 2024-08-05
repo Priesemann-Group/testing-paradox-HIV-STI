@@ -1,0 +1,40 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+gamma = 1 / 1.32
+tgamma = 1 / 7
+psi = 0.9
+lambda_o = 0.3 / 11
+lambda_h = 0.3 / 11
+mu = 1 / 45
+alpha = 0.0016 * 5
+
+# Calculating a and b
+a = lambda_o + mu
+b = gamma + lambda_h + mu
+
+# Define the range of R0
+R0_values = np.linspace(0.1, 5, 500)
+
+# Calculate I_star for each R0
+I_star_values = (mu + tgamma) * (1/R0_values - 1) / (
+    -b / psi + gamma - tgamma * (1 + b * (1 - psi) / (a * psi))
+)
+
+# Filter to only show positive I_star values
+positive_indices = I_star_values > 0
+R0_values_positive = R0_values[positive_indices]
+I_star_values_positive = I_star_values[positive_indices]
+
+# Plotting
+plt.plot(R0_values_positive, I_star_values_positive, label='$I^{a*}$: Endemic equilibrium', color='blue')
+plt.axhline(0, color='black', linewidth=0.8, linestyle='--', label='Disease-free equilibrium')
+plt.axvline(1, color='red', linestyle='--', label='$R_0=1$')
+plt.xlabel('$R_0$')
+plt.ylabel('$I^{a*}$')
+plt.title('Asymptomatic Infections $I^*$ vs. Bifurcation Parameter $R_0$')
+plt.legend()
+plt.grid(True)
+plt.show()
+
