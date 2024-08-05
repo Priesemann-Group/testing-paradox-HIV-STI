@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import jax
+import jax.numpy as jnp
 import icomo
 import logging
 
@@ -19,15 +20,101 @@ logger = logging.getLogger(__name__)
 
 
 # Function to calculate the modulating factor 'm' based on provided arguments
-def m(args):
+def m_logistic(args):
+    """
+    Calculate the self-regulation factor 'm' based on the given arguments.
+
+    Args:
+        args (dict): A dictionary containing the following keys:
+            - "m_max" (float): The maximum value of 'm'.
+            - "H_thres" (float): The threshold value of 'H'.
+            - "m_eps" (float): A small positive constant.
+            - "H" (float): The current value of 'H'.
+
+    Returns:
+        float: The calculated value of 'm'.
+
+    """
     logger.debug("Calculating modulating factor 'm'")
+    logger.info(
+        "Parameters: m_max = %s, H_thres = %s, m_eps = %s, H = %s",
+        args["m_max"],
+        args["H_thres"],
+        args["m_eps"],
+        args["H"],
+    )
     return args["m_max"] - args["m_max"] / args["H_thres"] * args[
         "m_eps"
     ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - args["H"]) / args["m_eps"]))
 
 
+def m_exponential(args):
+    """
+    Exponential function with three parameters: minimum value, maximum value, and rate/tau.
+
+    Args:
+    args (dict): A dictionary containing the parameters 'H', 'min_exp', 'max_exp', and 'tau_exp'.
+
+    Returns:
+    float: The output of the exponential function.
+    """
+    logger.debug(
+        "Calculating self-regulation factor factor 'm' using exponential function"
+    )
+    H = args["H"]
+    min_exp = args["min_exp"]
+    max_exp = args["max_exp"]
+    tau_exp = args["tau_exp"]
+
+    logger.info(
+        "Parameters: H = %s, min_exp = %s, max_exp = %s, tau_exp = %s",
+        H,
+        min_exp,
+        max_exp,
+        tau_exp,
+    )
+
+    return min_exp + (max_exp - min_exp) * (1 - jnp.exp(-H / tau_exp))
+
+
+def m(args):
+    """
+    Select the appropriate function to calculate the self-regulation factor 'm' based on the arguments.
+
+    Args:
+        args (dict): A dictionary containing the arguments for the calculation.
+
+    Returns:
+        The result of the calculation.
+    """
+    if args["m_function"] == "exponential":
+        logger.info("Using exponential function to calculate m")
+        return m_exponential(args)
+    elif args["m_function"] == "logistic":
+        logger.info("Using logistic function to calculate m")
+        return m_logistic(args)
+    else:
+        raise ValueError("Invalid m_function specified in args")
+
+
 # Function to calculate the testing rate of STI
 def lambda_STI(args):
+    """
+    Calculate the testing rate of STI.
+
+    Args:
+        args (dict): A dictionary containing the following parameters:
+            - lambda_0_a (float): Baseline test rate
+            - c (float): Constant term
+            - m (function): Function to calculate m value
+            - beta_HIV (float): HIV transmission rate
+            - H (float): Number of susceptible individuals
+            - P_HIV (float): HIV prevalence
+
+    Returns:
+        float: The testing rate of STI.
+
+    """
     logger.debug("Calculating testing rate of STI")
     return (
         args["lambda_0_a"]  # Baseline test rate
@@ -43,6 +130,16 @@ def lambda_STI(args):
 
 # Function to calculate infection from asymptomatic STI individuals
 def infect_ia(y, args):
+    """
+    Calculates the infection from asymptomatic STI individuals.
+
+    Parameters:
+    - y: A dictionary containing the current state variables.
+    - args: A dictionary containing the model parameters.
+
+    Returns:
+    - The calculated infection from asymptomatic STI individuals.
+    """
     logger.debug("Calculating infection from asymptomatic STI individuals")
     return (
         (args["asymptomatic"])
@@ -54,6 +151,16 @@ def infect_ia(y, args):
 
 # Function to calculate infection from symptomatic STI individuals
 def infect_is(y, args):
+    """
+    Calculate the infection from symptomatic STI individuals.
+
+    Parameters:
+    - y: A dictionary containing the number of individuals in different STI compartments.
+    - args: A dictionary containing the model parameters.
+
+    Returns:
+    - The calculated infection from symptomatic STI individuals.
+    """
     logger.debug("Calculating infection from symptomatic STI individuals")
     return (
         (1 - args["asymptomatic"])
@@ -64,6 +171,28 @@ def infect_is(y, args):
 
 
 # Main model function that defines the differential equations of the system
+def model(t, y, args):
+    """
+    Calculate the differential changes in a compartmental model for STI dynamics.
+
+    Parameters:
+    t (float): The time at which the model is evaluated.
+    y (list): The current values of the compartments in the model.
+    args (dict): Additional arguments required for the model calculations.
+
+    Returns:
+    list: The differential changes in the compartments.
+
+    """
+    logger.debug("Defining the differential equations of the system")
+    cm = icomo.CompModel(y)  # Initialize the compartmental model
+
+    # Rest of the code...
+
+    # Return the differential changes
+    return cm.dy
+
+
 def model(t, y, args):
     logger.debug("Defining the differential equations of the system")
     cm = icomo.CompModel(y)  # Initialize the compartmental model
@@ -91,6 +220,16 @@ def model(t, y, args):
 
 # Function to setup the model and return the integrator
 def setup_model(args, y0):
+    """
+    Set up the model for simulation.
+
+    Args:
+        args: Additional arguments for setting up the model.
+        y0: Initial conditions for the model.
+
+    Returns:
+        integrator: A function that can be used to solve the ODEs defined in the 'model' function.
+    """
 
     # Define the time span for the simulation
     ts = np.linspace(0, 3600 * 5, 3600)
