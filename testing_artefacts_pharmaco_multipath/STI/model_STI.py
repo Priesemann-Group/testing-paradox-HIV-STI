@@ -18,6 +18,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global flag to track logging
+logged_exp_logis = False
+
 
 # Function to calculate the modulating factor 'm' based on provided arguments
 def m_logistic(args):
@@ -35,14 +38,18 @@ def m_logistic(args):
         float: The calculated value of 'm'.
 
     """
+    global logged_exp_logis
     logger.debug("Calculating modulating factor 'm'")
-    logger.info(
-        "Parameters: m_max = %s, H_thres = %s, m_eps = %s, H = %s",
-        args["m_max"],
-        args["H_thres"],
-        args["m_eps"],
-        args["H"],
-    )
+    if not logged_exp_logis:
+        logger.info("Using logistic function to calculate m")
+        logger.info(
+            "Parameters: m_max = %s, H_thres = %s, m_eps = %s, H = %s",
+            args["m_max"],
+            args["H_thres"],
+            args["m_eps"],
+            args["H"],
+        )
+        logged_exp_logis = True
     return args["m_max"] - args["m_max"] / args["H_thres"] * args[
         "m_eps"
     ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - args["H"]) / args["m_eps"]))
@@ -58,6 +65,7 @@ def m_exponential(args):
     Returns:
     float: The output of the exponential function.
     """
+    global logged_exp_logis
     logger.debug(
         "Calculating self-regulation factor factor 'm' using exponential function"
     )
@@ -66,13 +74,16 @@ def m_exponential(args):
     max_exp = args["max_exp"]
     tau_exp = args["tau_exp"]
 
-    logger.info(
-        "Parameters: H = %s, min_exp = %s, max_exp = %s, tau_exp = %s",
-        H,
-        min_exp,
-        max_exp,
-        tau_exp,
-    )
+    if not logged_exp_logis:
+        logger.info("Using exponential function to calculate m")
+        logger.info(
+            "Parameters: H = %s, min_exp = %s, max_exp = %s, tau_exp = %s",
+            H,
+            min_exp,
+            max_exp,
+            tau_exp,
+        )
+        logged_exp_logis = True
 
     return min_exp + (max_exp - min_exp) * (1 - jnp.exp(-H / tau_exp))
 
@@ -88,10 +99,8 @@ def m(args):
         The result of the calculation.
     """
     if args["m_function"] == "exponential":
-        logger.info("Using exponential function to calculate m")
         return m_exponential(args)
     elif args["m_function"] == "logistic":
-        logger.info("Using logistic function to calculate m")
         return m_logistic(args)
     else:
         raise ValueError("Invalid m_function specified in args")
