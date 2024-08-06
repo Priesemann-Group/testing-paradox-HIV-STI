@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from unittest.mock import MagicMock
-from testing_artefacts_pharmaco_multipath.STI.sti_infection_results_LambdaP import (
+from tapm.STI.sti_infection_results_LambdaP import (
     compute_sti_infections,
 )
 
@@ -12,12 +12,13 @@ def setup_data():
     Ps = [0.1, 0.2]
     lambda_P_values = [0.1, 0.2]
     y0 = {"Ia_STI": 10, "Is_STI": 5, "S_STI": 100, "T_STI": 2}
-    args = {"lambda_0": 0.1, "H": 0.1, "P_HIV": 0.1, "lambda_P": 0.1}
+    args = {"lambda_s": 0.1, "H": 0.1, "P_HIV": 0.1, "lambda_P": 0.1}
     integrator = MagicMock()
     integrator.return_value = {
         "Ia_STI": np.array([10, 9, 8]),
         "Is_STI": np.array([5, 4, 3]),
         "T_STI": np.array([2, 1, 0]),
+        "S_STI": np.array([100, 99, 98]),
     }
     model_STI = MagicMock()
     model_STI.infect_is.return_value = 0.1

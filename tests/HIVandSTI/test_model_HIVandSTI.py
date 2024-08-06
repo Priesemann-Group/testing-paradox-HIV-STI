@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
 import jax.numpy as jnp
-from testing_artefacts_pharmaco_multipath.HIVandSTI.model_HIVandSTI import (
+from tapm.HIVandSTI.model_HIVandSTI import (
     m_logistic,
     m_exponential,
     m,
-    lambda_STI,
+    lambda_a,
     beta_STI,
     beta_HIV,
     phi_H_eff,
@@ -25,7 +25,7 @@ def args():
         "max_exp": 1.0,
         "tau_exp": 0.5,
         "m_function": "exponential",
-        "lambda_0_a": 0.1,
+        "lambda_0": 0.1,
         "c": 0.2,
         "beta_HIV": 0.3,
         "P_HIV": 0.1,
@@ -33,7 +33,7 @@ def args():
         "beta_0_STI": 0.5,
         "beta_0_HIV": 0.6,
         "rho": 0.7,
-        "lambda_S": 0.8,
+        "lambda_s": 0.8,
         "nu": 0.9,
         "alpha": 0.1,
         "mu": 0.01,
@@ -57,9 +57,9 @@ def y():
         "E_HIV": 3,
         "I_HIV": 7,
         "T_HIV": 1,
-        "P": 4,
         "H": 0.2,
         "h": 0.1,
+        "P": 4,
         "phi_H": 0.3,
     }
 
@@ -84,8 +84,8 @@ def test_m(args):
     assert isinstance(result, jnp.ndarray)
 
 
-def test_lambda_STI(y, args):
-    result = lambda_STI(y, args)
+def test_lambda_a(y, args):
+    result = lambda_a(y, args)
     assert isinstance(result, jnp.ndarray)
 
 
@@ -94,21 +94,35 @@ def test_beta_STI(y, args):
     assert isinstance(result, jnp.ndarray)
 
 
-def test_beta_HIV(y, args):
-    result = beta_HIV(y, args)
+def test_beta_HIV(args):
+    result = beta_HIV(args)
     assert isinstance(result, jnp.ndarray)
 
 
 def test_phi_H_eff(y, args):
     result = phi_H_eff(y, args)
+    result = jnp.array(result)
     assert isinstance(result, jnp.ndarray)
 
 
 def test_model(args):
-    t = 0
-    y = [100, 10, 5, 2, 90, 3, 7, 1, 4, 0.2, 0.1, 0.3]
+    t = 5
+    y = {
+        'S_STI': 100,
+        'Ia_STI': 10,
+        'Is_STI': 5,
+        'T_STI': 2,
+        'S_HIV': 90,
+        'E_HIV': 3,
+        'I_HIV': 7,
+        'T_HIV': 1,
+        'P': 4,
+        'h': 0.2,
+        'H': 0.1,
+        'phi_H': 0.3,
+    }
     result = model(t, y, args)
-    assert isinstance(result, list)
+    assert isinstance(result, dict)
 
 
 def test_setup_model(args):

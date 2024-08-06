@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
 import jax.numpy as jnp
-from testing_artefacts_pharmaco_multipath.STI.model_STI import (
+from tapm.STI.model_STI import (
     m_logistic,
     m_exponential,
     m,
-    lambda_STI,
+    lambda_a,
     infect_ia,
     infect_is,
     model,
@@ -24,7 +24,7 @@ def args():
         "max_exp": 1.0,
         "tau_exp": 0.5,
         "m_function": "exponential",
-        "lambda_0_a": 0.1,
+        "lambda_0": 0.1,
         "c": 0.2,
         "beta_HIV": 0.3,
         "P_HIV": 0.1,
@@ -32,7 +32,7 @@ def args():
         "asymptomatic": 0.5,
         "beta_STI": 0.6,
         "gamma_STI": 0.7,
-        "lambda_0": 0.8,
+        "lambda_s": 0.8,
         "gammaT_STI": 0.9,
         "mu": 0.01,
     }
@@ -63,8 +63,8 @@ def test_m(args):
     assert isinstance(result, jnp.ndarray)
 
 
-def test_lambda_STI(args):
-    result = lambda_STI(args)
+def test_lambda_a(args):
+    result = lambda_a(args)
     assert isinstance(result, jnp.ndarray)
 
 
@@ -80,9 +80,14 @@ def test_infect_is(y, args):
 
 def test_model(args):
     t = 0
-    y = [100, 10, 5, 2]
+    y = {
+        'S_STI': 100,
+        'Ia_STI': 10,
+        'Is_STI': 5,
+        'T_STI': 2
+    }
     result = model(t, y, args)
-    assert isinstance(result, list)
+    assert isinstance(result, dict)
 
 
 def test_setup_model(args):
