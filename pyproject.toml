@@ -44,8 +44,13 @@ dev = [
     "mplcursors",
     "jax",
     "diffrax",
-    "icomo"
+    "icomo",
+    "pytest"
 ]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"]
 
 [tool.black]
 line-length = 88
@@ -56,3 +61,8 @@ profile = "black"
 
 [tool.setuptools_scm]
 write_to = "testing-artefacts-pharmaco-multipath/_version.py"
+
+[tool.coverage.report]
+exclude_also = [
+    "pass"
+]
