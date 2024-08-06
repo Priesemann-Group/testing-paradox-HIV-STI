@@ -18,3 +18,15 @@ def save_results(results, filename):
     # Save the results to a file
     np.save(f"../results/{filename}.npy", results)
     logger.info(f"Results saved to ../results/{filename}.npy")
+
+
+# Define a function to read and evaluate the file
+def read_params(filename):
+    with open(filename, 'r') as file:
+        content = file.read()
+    # Create a dictionary to hold the local variables
+    local_vars = {}
+    # Execute the content of the file
+    exec(content, {}, local_vars)
+    # Extract the variables
+    return local_vars['args'], local_vars['y0']

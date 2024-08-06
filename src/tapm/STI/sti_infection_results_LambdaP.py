@@ -1,7 +1,6 @@
 import numpy as np
 import logging
-import jax
-from testing_artefacts_pharmaco_multipath import utils
+from tapm import utils
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -9,10 +8,17 @@ logger = logging.getLogger(__name__)
 
 
 def compute_sti_infections(
-    Hs, Ps, lambda_P_values, y0, args, integrator, model_STI, filename=None
+    Hs,
+    Ps,
+    lambda_P_values,
+    y0,
+    args,
+    integrator,
+    model_STI,
+    filename=None,
 ):
     """
-    Compute STI infections for given H, P, and lambda_P values and store the results for different H values.
+    Compute STI infections for given H, P, and lambda_P values and store the results for different lambda_P values.
 
     Parameters:
     Hs (list): List of H values.
@@ -25,17 +31,17 @@ def compute_sti_infections(
     filename (str): Name of the file to save the results.
 
     Returns:
-    dict: Results for different H values.
+    dict: Results for different lambda_P values.
     """
-    # Dictionary to store results for different H values
+    # Dictionary to store results for different lambda_P values
     results = {}
 
-    # Loop over each value of H
-    for H in Hs:
-        logger.info(f"Processing H={H}")
+    # Loop over each lambda_P value
+    for lambda_P in lambda_P_values:
+        logger.info(f"Processing lambda_P: {lambda_P}")
 
         # Determine the size of the result matrices
-        res_size = [len(lambda_P_values), len(Ps)]
+        res_size = [len(Hs), len(Ps)]
 
         # Initialize result matrices
         res_Ia = np.zeros(res_size)  # Asymptomatic STI infections
@@ -49,9 +55,12 @@ def compute_sti_infections(
         res_symp_tests = np.zeros(res_size)  # Tests for symptomatic
         check = np.zeros(res_size)  # Convergence check
 
-        # Loop over each lambda_P value
-        for i, lambda_P in enumerate(lambda_P_values):
+        # Loop over each value of H and P
+        for i, H in enumerate(Hs):
             for j, P in enumerate(Ps):
+                logger.debug(f"Processing H: {H}, P: {P}")
+
+                # Modify arguments for the current H and P
                 args_mod = args.copy()
                 args_mod["H"] = H
                 args_mod["P_HIV"] = P
@@ -89,25 +98,25 @@ def compute_sti_infections(
                 )
 
                 # Detected (by testing) new infections from symptomatic and asymptomatic
-                res_tests[i, j] = (model_STI.lambda_STI(args_mod) * y1["Ia_STI"]) + (
-                    args["lambda_0"] * y1["Is_STI"]
+                res_tests[i, j] = (model_STI.lambda_a(args_mod) * y1["Ia_STI"]) + (
+                    args["lambda_s"] * y1["Is_STI"]
                 )
 
                 # Detected (by testing) new infections from asymptomatic
-                res_asymp_tests[i, j] = model_STI.lambda_STI(args_mod) * y1["Ia_STI"]
+                res_asymp_tests[i, j] = model_STI.lambda_a(args_mod) * y1["Ia_STI"]
 
                 # Detected (by testing) new infections from symptomatic
-                res_symp_tests[i, j] = args["lambda_0"] * y1["Is_STI"]
+                res_symp_tests[i, j] = args["lambda_s"] * y1["Is_STI"]
 
                 # Check for convergence by comparing the last and the second last values
                 check[i, j] = (
-                    abs(output["Ia_STI"][-1] - output["Ia_STI"][-101])
-                    + abs(output["T_STI"][-1] - output["T_STI"][-101])
-                    + abs(output["Is_STI"][-1] - output["Is_STI"][-101])
+                    abs(output["Ia_STI"][-1] - output["Ia_STI"][-len(Hs)])
+                    + abs(output["T_STI"][-1] - output["T_STI"][-len(Hs)])
+                    + abs(output["Is_STI"][-1] - output["Is_STI"][-len(Hs)])
                 )
 
-        # Store the results for the current H value
-        results[H] = {
+        # Store the results for the current lambda_P value
+        results[lambda_P] = {
             "res_Ia": res_Ia,
             "res_Is": res_Is,
             "res_T": res_T,
@@ -121,7 +130,7 @@ def compute_sti_infections(
         }
 
         # Log the maximum value from the check matrix to ensure convergence
-        logger.info(f"Max check value for H={H}: {results[H]['check'].max()}")
+        logger.info(f"Max check value for lambda_P {lambda_P}: {check.max()}")
 
     # Save the results to a file
     if filename:

@@ -1,18 +1,29 @@
-# This python file contains the model definition for the STI dynamics in the model.
+# This python file contains the model definition for the coupled HIV and STI dynamics in the model.
 # The model is defined as a set of differential equations that describe the flow of individuals between different compartments.
-# The model includes compartments for susceptible individuals, asymptomatic STI cases, symptomatic STI cases, and individuals undergoing treatment for STI.
-# The model also includes parameters that describe the transmission dynamics of the STI, the testing and treatment rates, and the impact of HIV on STI transmission.
-# The model is implemented using the icomo library, which provides tools for defining and solving compartmental models. The model is set up to be integrated over a time span of 5 years, with output time points every hour.
-# The model is ready for simulation once it is set up.
+
+# compartments stored in y:
+# S_HIV: Susceptible to HIV
+# E_HIV: Exposed to HIV
+# I_HIV: Infected with HIV
+# T_HIV: Tested and treated for HIV
+# P: Protected (through PrEP)
+# S_STI: Susceptible to STI
+# Ia_STI: Asymptomatic STI cases
+# Is_STI: Symptomatic STI cases
+# T_STI: Tested and treated for STI
+# H: hazard
+# h: help variable for hazard
+# phi_H: [TODO: name?]
+
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import jax
-import jax.numpy as jnp
 import icomo
 import logging
+import jax.numpy as jnp
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -107,27 +118,11 @@ def m(args):
 
 
 # Function to calculate the testing rate of STI
-def lambda_STI(args):
-    """
-    Calculate the testing rate of STI.
-
-    Args:
-        args (dict): A dictionary containing the following parameters:
-            - lambda_0_a (float): Baseline test rate
-            - c (float): Constant term
-            - m (function): Function to calculate m value
-            - beta_HIV (float): HIV transmission rate
-            - H (float): Number of susceptible individuals
-            - P_HIV (float): HIV prevalence
-
-    Returns:
-        float: The testing rate of STI.
-
-    """
+def lambda_a(y, args):
     logger.debug("Calculating testing rate of STI")
     return (
-        args["lambda_0_a"]  # Baseline test rate
-        + args["c"]
+        args["lambda_0"]  # Baseline test rate
+        + args["c"]  # contacts
         * (1 - m(args))
         * args["beta_HIV"]
         * args["H"]
@@ -137,83 +132,64 @@ def lambda_STI(args):
     )
 
 
-# Function to calculate infection from asymptomatic STI individuals
-def infect_ia(y, args):
-    """
-    Calculates the infection from asymptomatic STI individuals.
-
-    Parameters:
-    - y: A dictionary containing the current state variables.
-    - args: A dictionary containing the model parameters.
-
-    Returns:
-    - The calculated infection from asymptomatic STI individuals.
-    """
-    logger.debug("Calculating infection from asymptomatic STI individuals")
-    return (
-        (args["asymptomatic"])
-        * (1 - m(args) * (1 - args["P_HIV"]))
-        * args["beta_STI"]
-        * (y["Ia_STI"] + y["Is_STI"])
-    )
+# Function to calculate STI infection rate
+def beta_STI(y, args):
+    logger.debug("Calculating beta_STI")
+    return args["beta_0_STI"] * ((1 - m(args)) * (1 - y["P"]) + y["P"])
 
 
-# Function to calculate infection from symptomatic STI individuals
-def infect_is(y, args):
-    """
-    Calculate the infection from symptomatic STI individuals.
+# Function to calculate HIV infection rate
+def beta_HIV(args):
+    logger.debug("Calculating beta_HIV")
+    return args["beta_0_HIV"] * (1 - m(args))
 
-    Parameters:
-    - y: A dictionary containing the number of individuals in different STI compartments.
-    - args: A dictionary containing the model parameters.
 
-    Returns:
-    - The calculated infection from symptomatic STI individuals.
-    """
-    logger.debug("Calculating infection from symptomatic STI individuals")
-    return (
-        (1 - args["asymptomatic"])
-        * (1 - m(args) * (1 - args["P_HIV"]))
-        * args["beta_STI"]
-        * (y["Is_STI"] + y["Ia_STI"])
-    )
+# Function to calculate effective [TODO: name?]
+def phi_H_eff(y, args):
+    logger.debug("Calculating phi_H_eff")
+    return y["phi_H"] * (y["S_STI"] + y["P"])  # TODO: S_STI or S_HIV?
 
 
 # Main model function that defines the differential equations of the system
 def model(t, y, args):
-    """
-    Calculate the differential changes in a compartmental model for STI dynamics.
-
-    Parameters:
-    t (float): The time at which the model is evaluated.
-    y (list): The current values of the compartments in the model.
-    args (dict): Additional arguments required for the model calculations.
-
-    Returns:
-    list: The differential changes in the compartments.
-
-    """
-    logger.debug("Defining the differential equations of the system")
+    logger.debug("Defining the differential equations of the system HIVandSTI")
     cm = icomo.CompModel(y)  # Initialize the compartmental model
 
-    # Rest of the code...
+    # Basic HIV dynamics
+    cm.flow("S_HIV", "E_HIV", beta_HIV(args) * y["I_HIV"])  # Susceptible to exposed
+    cm.flow("E_HIV", "I_HIV", args["rho"])  # Exposed to infected
+    cm.flow("I_HIV", "T_HIV", args["lambda_s"])  # Infected to tested and treatment
+    cm.flow(
+        "T_HIV", "I_HIV", args["nu"]
+    )  # Testes and treated to infected, dropout/ need of new testing
+    cm.flow(
+        "P", "S_HIV", args["alpha"] * (phi_H_eff(y, args) / y["P"] + 1)
+    )  # Protected to tested and treatment
 
-    # Return the differential changes
-    return cm.dy
-
-
-def model(t, y, args):
-    logger.debug("Defining the differential equations of the system")
-    cm = icomo.CompModel(y)  # Initialize the compartmental model
+    # Vital dynamics HIV (natural death or other forms of removal)
+    cm.flow("E_HIV", "S_HIV", args["mu"])  # Death/removal from exposed
+    cm.flow("I_HIV", "S_HIV", args["mu"])  # Death/removal from infected
+    cm.flow("T_HIV", "S_HIV", args["mu"])  # Death/removal from treatment
+    cm.flow("P", "S_HIV", args["mu"])  # Death/removal from protected
 
     # Basic STI dynamics
-    cm.flow("S_STI", "Ia_STI", infect_ia(y, args))  # Susceptible to asymptomatic
-    cm.flow("S_STI", "Is_STI", infect_is(y, args))  # Susceptible to symptomatic
+    cm.flow(
+        "S_STI", "Ia_STI", args["psi"] * beta_STI(y, args) * (y["Ia_STI"] + y["Is_STI"])
+    )  # Susceptible to asymptomatic
+    cm.flow(
+        "S_STI",
+        "Is_STI",
+        (1 - args["psi"]) * beta_STI(y, args) * (y["Ia_STI"] + y["Is_STI"]),
+    )  # Susceptible to symptomatic
     cm.flow(
         "Ia_STI", "S_STI", args["gamma_STI"]
     )  # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia_STI", "T_STI", lambda_STI(args))  # Asymptomatic to tested and treatment
-    cm.flow("Is_STI", "T_STI", args["lambda_0"])  # Symptomatic to tested and treatment
+    cm.flow(
+        "Ia_STI", "T_STI", lambda_a(y, args)
+    )  # Asymptomatic to tested and treatment
+    cm.flow(
+        "Is_STI", "T_STI", lambda_a(y, args)
+    )  # Symptomatic to tested and treatment
     cm.flow(
         "T_STI", "S_STI", args["gammaT_STI"]
     )  # Treatment to susceptible (immunity loss)
@@ -223,22 +199,22 @@ def model(t, y, args):
     cm.flow("Is_STI", "S_STI", args["mu"])  # Death/removal from symptomatic
     cm.flow("T_STI", "S_STI", args["mu"])  # Death/removal from treatment
 
+    # Hazard dynamics # TODO: check if implemented correctly
+    h, H = icomo.delayed_copy(y["I_HIV"], [y["h"], y["H"]], args["tau"])
+    cm._add_dy_to_comp("h", h)
+    cm._add_dy_to_comp("H", H)
+
+    # phi_H # TODO: check if implemented correctly
+    cm._add_dy_to_comp(
+        "phi_H", args["r"] * y["phi_H"] * (1 - y["phi_H"] / args["phi_max"])
+    )
+
     # Return the differential changes
     return cm.dy
 
 
 # Function to setup the model and return the integrator
 def setup_model(args, y0):
-    """
-    Set up the model for simulation.
-
-    Args:
-        args: Additional arguments for setting up the model.
-        y0: Initial conditions for the model.
-
-    Returns:
-        integrator: A function that can be used to solve the ODEs defined in the 'model' function.
-    """
 
     # Define the time span for the simulation
     ts = np.linspace(0, 3600 * 5, 3600)
@@ -258,8 +234,3 @@ def setup_model(args, y0):
     logger.info("Model setup complete and ready for simulation")
 
     return integrator
-
-
-# If this script is run directly, setup the model
-# if __name__ == "__main__":
-#     integrator, y0, args = setup_model()

@@ -1,0 +1,34 @@
+## Last checked on 06/08/2024 at 15:30 by Philipp, Piklu, Antonio, Laura, Seba
+
+# Arguments for the model
+args = {
+    "m_function": "exponential",  # Modulating function
+    "beta_HIV": 0.6341 / 360.0,  # HIV infection rate per day
+    "beta_STI": 0.0016 * 5.0,  # STI infection rate [Checked]
+    "mu": 1.0 / 45.0 / 360.0,  # Natural death rate per day [Checked]
+    "gamma_STI": 1.0 / 1.32 / 360.0,  # Recovery rate from asymptomatic STI per day [Checked]
+    "gammaT_STI": 1.0 / 14.0,  # Recovery rate from treated STI per day [Checked, try with 1/7]
+    "lambda_0": 0.0,  # Baseline test rate for asymptomatic STI [Checked]
+    "lambda_s": 1 / 14.0,  # Baseline test rate for symptomatic STI [Checked]
+    "lambda_P": 2 / 360,  # Infection rate due to HIV prevalence [Checked]
+    "asymptomatic": 0.85,  # Proportion of asymptomatic infections [Checked]
+    "m_max": 0.8,  # Maximum modulating factor
+    "H_thres": 0.1,  # HIV threshold
+    "m_eps": 0.01,  # Small constant for smoothing
+    "Phi_r": 40.0,  # Not used in the current model
+    "H_tau": 20.0,  # Not used in the current model
+    "c": 50.0,  # Scaling factor for HIV interaction term
+    "H": 0.0,  # Initial HIV prevalence
+    "P_HIV": 0.0,  # Initial proportion of HIV positive individuals
+    "min_exp": 0.0,  # Minimum value for the exponential modulating factor
+    "max_exp": 1.0,  # Maximum value for the exponential modulating factor
+    "tau_exp": 0.2,  # Time constant for the exponential modulating factor
+}
+
+# Initial state of the compartments
+y0 = {
+    "S_STI": 0.99,  # Initial susceptible proportion
+    "Ia_STI": 0.009,  # Initial asymptomatic proportion
+    "Is_STI": 0.001,  # Initial symptomatic proportion
+    "T_STI": 0.0,  # Initial treated proportion
+}

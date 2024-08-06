@@ -11,3 +11,4 @@ mplcursors
 jax
 diffrax
 icomo
+pytest

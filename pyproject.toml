@@ -1,12 +1,12 @@
 [build-system]
 requires = [
-    "setuptools>=45",
-    "setuptools_scm>=6.2",
+    "setuptools>=67",
+    "setuptools_scm>=8.0",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "testing-artefacts-pharmaco-multipath"
+name = "tapm"
 authors = [
   { name = "Priesemann Group"}
 ]
@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 dynamic = ["version", "dependencies"]
-requires-python = '>=3.8.1'
+requires-python = '>=3.8'
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
@@ -44,8 +44,12 @@ dev = [
     "mplcursors",
     "jax",
     "diffrax",
-    "icomo"
+    "icomo",
+    "pytest"
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests",]
 
 [tool.black]
 line-length = 88
@@ -55,4 +59,4 @@ profile = "black"
 
 
 [tool.setuptools_scm]
-write_to = "testing-artefacts-pharmaco-multipath/_version.py"
+version_file= "src/tapm/_version.py"
