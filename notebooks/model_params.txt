@@ -7,7 +7,7 @@ args = {
     "beta_STI": 0.0016 * 5.0,  # STI infection rate [Checked]
     "mu": 1.0 / 45.0 / 360.0,  # Natural death rate per day [Checked]
     "gamma_STI": 1.0 / 1.32 / 360.0,  # Recovery rate from asymptomatic STI per day [Checked]
-    "gammaT_STI": 1.0 / 14.0,  # Recovery rate from treated STI per day [Checked, try with 1/7]
+    "gammaT_STI": 1.0 / 7.0,  # Recovery rate from treated STI per day [Checked, try with 1/7]
     "lambda_0": 0.0,  # Baseline test rate for asymptomatic STI [Checked]
     "lambda_s": 1 / 14.0,  # Baseline test rate for symptomatic STI [Checked]
     "lambda_P": 2 / 360,  # Infection rate due to HIV prevalence [Checked]

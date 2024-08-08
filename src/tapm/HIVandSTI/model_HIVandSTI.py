@@ -58,7 +58,6 @@ def m_logistic(args):
             args["m_max"],
             args["H_thres"],
             args["m_eps"],
-            args["H"],
         )
         logged_exp_logis = True
     return args["m_max"] - args["m_max"] / args["H_thres"] * args[
@@ -88,8 +87,7 @@ def m_exponential(args):
     if not logged_exp_logis:
         logger.info("Using exponential function to calculate m")
         logger.info(
-            "Parameters: H = %s, min_exp = %s, max_exp = %s, tau_exp = %s",
-            H,
+            "Parameters: min_exp = %s, max_exp = %s, tau_exp = %s",
             min_exp,
             max_exp,
             tau_exp,
@@ -187,9 +185,7 @@ def model(t, y, args):
     cm.flow(
         "Ia_STI", "T_STI", lambda_a(y, args)
     )  # Asymptomatic to tested and treatment
-    cm.flow(
-        "Is_STI", "T_STI", lambda_a(y, args)
-    )  # Symptomatic to tested and treatment
+    cm.flow("Is_STI", "T_STI", lambda_a(y, args))  # Symptomatic to tested and treatment
     cm.flow(
         "T_STI", "S_STI", args["gammaT_STI"]
     )  # Treatment to susceptible (immunity loss)
