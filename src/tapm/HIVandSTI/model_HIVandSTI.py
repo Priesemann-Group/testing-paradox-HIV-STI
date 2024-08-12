@@ -133,13 +133,13 @@ def lambda_a(y, args):
 # Function to calculate STI infection rate
 def beta_STI(y, args):
     logger.debug("Calculating beta_STI")
-    return args["beta_0_STI"] * ((1 - m(args)) * (1 - y["P"]) + y["P"])
+    return args["beta_STI"] * ((1 - m(args)) * (1 - y["P"]) + y["P"])
 
 
 # Function to calculate HIV infection rate
 def beta_HIV(args):
     logger.debug("Calculating beta_HIV")
-    return args["beta_0_HIV"] * (1 - m(args))
+    return args["beta_HIV"] * (1 - m(args))
 
 
 # Function to calculate effective [TODO: name?]
