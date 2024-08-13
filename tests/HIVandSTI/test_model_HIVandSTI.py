@@ -30,8 +30,8 @@ def args():
         "beta_HIV": 0.3,
         "P_HIV": 0.1,
         "lambda_P": 0.4,
-        "beta_0_STI": 0.5,
-        "beta_0_HIV": 0.6,
+        "beta_STI": 0.5,
+        "beta_HIV": 0.6,
         "rho": 0.7,
         "lambda_s": 0.8,
         "nu": 0.9,
@@ -108,18 +108,18 @@ def test_phi_H_eff(y, args):
 def test_model(args):
     t = 5
     y = {
-        'S_STI': 100,
-        'Ia_STI': 10,
-        'Is_STI': 5,
-        'T_STI': 2,
-        'S_HIV': 90,
-        'E_HIV': 3,
-        'I_HIV': 7,
-        'T_HIV': 1,
-        'P': 4,
-        'h': 0.2,
-        'H': 0.1,
-        'phi_H': 0.3,
+        "S_STI": 100,
+        "Ia_STI": 10,
+        "Is_STI": 5,
+        "T_STI": 2,
+        "S_HIV": 90,
+        "E_HIV": 3,
+        "I_HIV": 7,
+        "T_HIV": 1,
+        "P": 4,
+        "h": 0.2,
+        "H": 0.1,
+        "phi_H": 0.3,
     }
     result = model(t, y, args)
     assert isinstance(result, dict)
