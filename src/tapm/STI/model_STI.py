@@ -130,7 +130,7 @@ def lambda_a(args):
     return (
         args["lambda_0"]  # Baseline test rate
         + args["c"]
-        * (1 - m(args))
+        * (1 - m(args, H=None))
         * args["beta_HIV"]
         * args["H"]
         * (1 - args["P_HIV"])  # HIV dependent term
@@ -154,7 +154,7 @@ def infect_ia(y, args):
     logger.debug("Calculating infection from asymptomatic STI individuals")
     return (
         (args["asymptomatic"])
-        * (1 - m(args) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
         * args["beta_STI"]
         * (y["Ia_STI"] + y["Is_STI"])
     )
@@ -175,7 +175,7 @@ def infect_is(y, args):
     logger.debug("Calculating infection from symptomatic STI individuals")
     return (
         (1 - args["asymptomatic"])
-        * (1 - m(args) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
         * args["beta_STI"]
         * (y["Is_STI"] + y["Ia_STI"])
     )
@@ -233,7 +233,7 @@ def setup_model(args, y0):
     """
 
     # Define the time span for the simulation
-    ts = np.linspace(0, 3600 * 5, 3600)
+    ts = np.linspace(0, 3600 * 10, 3600)
 
     # Create an ODE integrator object using the icomo library
     integrator_object = icomo.ODEIntegrator(
