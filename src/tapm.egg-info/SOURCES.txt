@@ -19,6 +19,8 @@ figures/lambda_P.pdf
 figures/observed_frac.pdf
 figures/observed_fraction.pdf
 figures/total_lambda.pdf
+notebooks/HIVandSTI_first_test.ipynb
+notebooks/NotebookForPrEP.ipynb
 notebooks/STI_model_sweep.ipynb
 notebooks/analytical_solution.ipynb
 notebooks/basic_model.ipynb
@@ -26,6 +28,7 @@ notebooks/implicitanother.py
 notebooks/implicitnotsolved.py
 notebooks/lambdaP_vs_P.ipynb
 notebooks/model_params.txt
+notebooks/model_params_HIVandSTI.txt
 notebooks/model_sweep.ipynb
 notebooks/model_sweep_P_H_lambda.ipynb
 notebooks/modified_STI_model_sweep.ipynb
@@ -52,9 +55,15 @@ src/tapm.egg-info/dependency_links.txt
 src/tapm.egg-info/requires.txt
 src/tapm.egg-info/top_level.txt
 src/tapm/HIVandSTI/model_HIVandSTI.py
+src/tapm/HIVandSTI/__pycache__/model_HIVandSTI.cpython-311.pyc
 src/tapm/STI/model_STI.py
 src/tapm/STI/sti_infection_results_H.py
 src/tapm/STI/sti_infection_results_LambdaP.py
+src/tapm/STI/__pycache__/model_STI.cpython-311.pyc
+src/tapm/STI/__pycache__/sti_infection_results_H.cpython-311.pyc
+src/tapm/STI/__pycache__/sti_infection_results_LambdaP.cpython-311.pyc
+src/tapm/__pycache__/__init__.cpython-311.pyc
+src/tapm/__pycache__/utils.cpython-311.pyc
 tests/HIVandSTI/test_model_HIVandSTI.py
 tests/STI/test_model_sti.py
 tests/STI/test_sti_infection_results_H.py
