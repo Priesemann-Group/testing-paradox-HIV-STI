@@ -23,7 +23,7 @@ logged_exp_logis = False
 
 
 # Function to calculate the modulating factor 'm' based on provided arguments
-def m_logistic(args):
+def m_logistic(args, H=None):
     """
     Calculate the self-regulation factor 'm' based on the given arguments.
 
@@ -49,17 +49,20 @@ def m_logistic(args):
             args["m_eps"],
         )
         logged_exp_logis = True
+    if H is None:
+        H = args["H"]
     return args["m_max"] - args["m_max"] / args["H_thres"] * args[
         "m_eps"
-    ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - args["H"]) / args["m_eps"]))
+    ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - H) / args["m_eps"]))
 
 
-def m_exponential(args):
+def m_exponential(args, H=None):
     """
     Exponential function with three parameters: minimum value, maximum value, and rate/tau.
 
     Args:
     args (dict): A dictionary containing the parameters 'H', 'min_exp', 'max_exp', and 'tau_exp'.
+    H (float): The current value of 'H'.
 
     Returns:
     float: The output of the exponential function.
@@ -68,7 +71,8 @@ def m_exponential(args):
     logger.debug(
         "Calculating self-regulation factor factor 'm' using exponential function"
     )
-    H = args["H"]
+    if H is None:
+        H = args["H"]
     min_exp = args["min_exp"]
     max_exp = args["max_exp"]
     tau_exp = args["tau_exp"]
@@ -86,7 +90,7 @@ def m_exponential(args):
     return min_exp + (max_exp - min_exp) * (1 - jnp.exp(-H / tau_exp))
 
 
-def m(args):
+def m(args, H):
     """
     Select the appropriate function to calculate the self-regulation factor 'm' based on the arguments.
 
@@ -97,9 +101,9 @@ def m(args):
         The result of the calculation.
     """
     if args["m_function"] == "exponential":
-        return m_exponential(args)
+        return m_exponential(args, H)
     elif args["m_function"] == "logistic":
-        return m_logistic(args)
+        return m_logistic(args, H)
     else:
         raise ValueError("Invalid m_function specified in args")
 
@@ -126,7 +130,7 @@ def lambda_a(args):
     return (
         args["lambda_0"]  # Baseline test rate
         + args["c"]
-        * (1 - m(args))
+        * (1 - m(args, H=None))
         * args["beta_HIV"]
         * args["H"]
         * (1 - args["P_HIV"])  # HIV dependent term
@@ -150,7 +154,7 @@ def infect_ia(y, args):
     logger.debug("Calculating infection from asymptomatic STI individuals")
     return (
         (args["asymptomatic"])
-        * (1 - m(args) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
         * args["beta_STI"]
         * (y["Ia_STI"] + y["Is_STI"])
     )
@@ -171,7 +175,7 @@ def infect_is(y, args):
     logger.debug("Calculating infection from symptomatic STI individuals")
     return (
         (1 - args["asymptomatic"])
-        * (1 - m(args) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
         * args["beta_STI"]
         * (y["Is_STI"] + y["Ia_STI"])
     )
@@ -229,7 +233,7 @@ def setup_model(args, y0):
     """
 
     # Define the time span for the simulation
-    ts = np.linspace(0, 3600 * 5, 3600)
+    ts = np.linspace(0, 3600 * 10, 3600)
 
     # Create an ODE integrator object using the icomo library
     integrator_object = icomo.ODEIntegrator(

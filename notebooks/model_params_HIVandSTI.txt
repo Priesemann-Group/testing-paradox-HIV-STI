@@ -1,4 +1,4 @@
-## Needs to be checked:  y0, alpha, r, phi_max
+## Needs to be checked:  y0
 
 # Arguments for the model
 args = {
@@ -24,8 +24,6 @@ args = {
     "tau_exp": 0.2,  # Time constant for the exponential modulating factor
     "rho": 1/42, # Inverse of time to seroconversion
     "nu": 0.0661, # Dropout/need for new treatment 
-    "alpha": 0.001, # PrEP adoption rate
-    "r": 0, #??
     "phi_max": 0.5, # Maximum PrEP uptake
 }
 
