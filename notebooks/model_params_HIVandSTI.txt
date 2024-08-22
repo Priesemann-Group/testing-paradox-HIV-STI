@@ -8,22 +8,17 @@ args = {
     "mu": 1.0 / 45.0 / 360.0,  # Natural death rate per day [Checked]
     "gamma_STI": 1.0 / 1.32 / 360.0,  # Recovery rate from asymptomatic STI per day [Checked]
     "gammaT_STI": 1.0 / 7.0,  # Recovery rate from treated STI per day [Checked, try with 1/7]
-    "lambda_0": 0.0,  # Baseline test rate for asymptomatic STI [Checked]
     "lambda_s": 1 / 14.0,  # Baseline test rate for symptomatic STI [Checked]
-    "lambda_P": 2 / 360,  # Infection rate due to HIV prevalence [Checked]
+    "lambda_P": 1 / 360,  # Infection rate due to HIV prevalence [Checked]
     "psi": 0.85,  # Proportion of asymptomatic infections [Checked]
-    "m_max": 0.8,  # Maximum modulating factor
     "H_thres": 0.1,  # HIV threshold
-    "m_eps": 0.01,  # Small constant for smoothing
     "tau": 30.0,  # Delay for behavioral feedback 
     "c": 50.0,  # Scaling factor for HIV interaction term
-    "H": 0.0,  # Initial HIV prevalence
-    "P_HIV": 0.0,  # Initial proportion of HIV positive individuals
     "min_exp": 0.0,  # Minimum value for the exponential modulating factor
     "max_exp": 1.0,  # Maximum value for the exponential modulating factor
     "tau_exp": 0.2,  # Time constant for the exponential modulating factor
     "rho": 1/42, # Inverse of time to seroconversion
-    "nu": 0.0661, # Dropout/need for new treatment 
+    "nu": 0.0661/365, # Dropout/need for new treatment 
     "phi_max": 0.5, # Maximum PrEP uptake
 }
 
