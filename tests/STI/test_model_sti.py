@@ -43,23 +43,23 @@ def y():
     return {"Ia_STI": 10, "Is_STI": 5, "S_STI": 100, "T_STI": 2}
 
 
-def test_m_logistic(args):
-    result = m_logistic(args)
+def test_m_logistic(args, H=0.3):
+    result = m_logistic(args, H)
     assert isinstance(result, jnp.ndarray)
 
 
-def test_m_exponential(args):
-    result = m_exponential(args)
+def test_m_exponential(args, H=0.7):
+    result = m_exponential(args, H)
     assert isinstance(result, jnp.ndarray)
 
 
-def test_m(args):
+def test_m(args, H=0.5):
     args["m_function"] = "logistic"
-    result = m(args)
+    result = m(args, H)
     assert isinstance(result, jnp.ndarray)
 
     args["m_function"] = "exponential"
-    result = m(args)
+    result = m(args, H)
     assert isinstance(result, jnp.ndarray)
 
 
@@ -80,12 +80,7 @@ def test_infect_is(y, args):
 
 def test_model(args):
     t = 0
-    y = {
-        'S_STI': 100,
-        'Ia_STI': 10,
-        'Is_STI': 5,
-        'T_STI': 2
-    }
+    y = {"S_STI": 100, "Ia_STI": 10, "Is_STI": 5, "T_STI": 2}
     result = model(t, y, args)
     assert isinstance(result, dict)
 

@@ -11,7 +11,8 @@ def setup_data():
     Hs = [0.1, 0.2]
     Ps = [0.1, 0.2]
     lambda_P_values = [0.1, 0.2]
-    y0 = {"Ia_STI": 10, "Is_STI": 5, "S_STI": 100, "T_STI": 2}
+    yin_constant = {"Ia_STI": 10, "Is_STI": 5, "S_STI": 100, "T_STI": 2}
+    yin_variable = False
     args = {"lambda_s": 0.1, "H": 0.1, "P_HIV": 0.1, "lambda_P": 0.1}
     integrator = MagicMock()
     integrator.return_value = {
@@ -24,13 +25,24 @@ def setup_data():
     model_STI.infect_is.return_value = 0.1
     model_STI.infect_ia.return_value = 0.1
     model_STI.lambda_STI.return_value = 0.1
-    return Hs, Ps, lambda_P_values, y0, args, integrator, model_STI
+    return (
+        Hs,
+        Ps,
+        lambda_P_values,
+        yin_constant,
+        yin_variable,
+        args,
+        integrator,
+        model_STI,
+    )
 
 
 def test_compute_sti_infections(setup_data):
-    Hs, Ps, lambda_P_values, y0, args, integrator, model_STI = setup_data
+    Hs, Ps, lambda_P_values, yin_constant, yin_variable, args, integrator, model_STI = (
+        setup_data
+    )
     results = compute_sti_infections(
-        Hs, Ps, lambda_P_values, y0, args, integrator, model_STI
+        Hs, Ps, lambda_P_values, yin_constant, yin_variable, args, integrator, model_STI
     )
     assert isinstance(results, dict)
     for lambda_P in lambda_P_values:
