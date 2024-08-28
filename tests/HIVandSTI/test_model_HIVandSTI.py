@@ -41,8 +41,10 @@ def args():
         "gamma_STI": 0.7,
         "gammaT_STI": 0.9,
         "tau": 0.1,
-        "r": 0.2,
+        "phi_r": 0.2,
+        "phi_min": 1.0,
         "phi_max": 1.0,
+        "lambda_ARV": 0.3,
     }
 
 
@@ -57,30 +59,29 @@ def y():
         "E_HIV": 3,
         "I_HIV": 7,
         "T_HIV": 1,
+        "P_HIV": 4,
         "H": 0.2,
         "h": 0.1,
-        "P": 4,
-        "phi_H": 0.3,
     }
 
 
-def test_m_logistic(args):
-    result = m_logistic(args)
+def test_m_logistic(y, args):
+    result = m_logistic(y, args)
     assert isinstance(result, jnp.ndarray)
 
 
-def test_m_exponential(args):
-    result = m_exponential(args)
+def test_m_exponential(y, args):
+    result = m_exponential(y, args)
     assert isinstance(result, jnp.ndarray)
 
 
-def test_m(args):
+def test_m(y, args):
     args["m_function"] = "logistic"
-    result = m(args)
+    result = m(y, args)
     assert isinstance(result, jnp.ndarray)
 
     args["m_function"] = "exponential"
-    result = m(args)
+    result = m(y, args)
     assert isinstance(result, jnp.ndarray)
 
 
@@ -94,8 +95,8 @@ def test_beta_STI(y, args):
     assert isinstance(result, jnp.ndarray)
 
 
-def test_beta_HIV(args):
-    result = beta_HIV(args)
+def test_beta_HIV(y, args):
+    result = beta_HIV(y, args)
     assert isinstance(result, jnp.ndarray)
 
 
@@ -116,12 +117,12 @@ def test_model(args):
         "E_HIV": 3,
         "I_HIV": 7,
         "T_HIV": 1,
-        "P": 4,
+        "P_HIV": 4,
         "h": 0.2,
         "H": 0.1,
-        "phi_H": 0.3,
     }
-    result = model(t, y, args)
+    func_t = lambda x: x
+    result = model(t, y, (func_t ,args))
     assert isinstance(result, dict)
 
 
