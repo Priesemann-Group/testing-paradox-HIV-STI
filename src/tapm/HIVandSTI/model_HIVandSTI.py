@@ -18,8 +18,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+#from matplotlib.ticker import FuncFormatter
+#from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import jax
 import icomo
 import logging
@@ -34,7 +34,7 @@ logged_exp_logis = False
 
 
 # Function to calculate the modulating factor 'm' based on provided arguments
-def m_logistic(args):
+def m_logistic(y, args):
     """
     Calculate the self-regulation factor 'm' based on the given arguments.
 
@@ -62,10 +62,10 @@ def m_logistic(args):
         logged_exp_logis = True
     return args["m_max"] - args["m_max"] / args["H_thres"] * args[
         "m_eps"
-    ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - args["H"]) / args["m_eps"]))
+    ] * jax.numpy.log(1 + jax.numpy.exp((args["H_thres"] - y["H"]) / args["m_eps"]))
 
 
-def m_exponential(args):
+def m_exponential(y, args):
     """
     Exponential function with three parameters: minimum value, maximum value, and rate/tau.
 
@@ -79,7 +79,7 @@ def m_exponential(args):
     logger.debug(
         "Calculating self-regulation factor factor 'm' using exponential function"
     )
-    H = args["H"]
+    H = y["H"]
     min_exp = args["min_exp"]
     max_exp = args["max_exp"]
     tau_exp = args["tau_exp"]
@@ -97,7 +97,7 @@ def m_exponential(args):
     return min_exp + (max_exp - min_exp) * (1 - jnp.exp(-H / tau_exp))
 
 
-def m(args):
+def m(y, args):
     """
     Select the appropriate function to calculate the self-regulation factor 'm' based on the arguments.
 
@@ -108,9 +108,9 @@ def m(args):
         The result of the calculation.
     """
     if args["m_function"] == "exponential":
-        return m_exponential(args)
+        return m_exponential(y, args)
     elif args["m_function"] == "logistic":
-        return m_logistic(args)
+        return m_logistic(y, args)
     else:
         raise ValueError("Invalid m_function specified in args")
 
@@ -121,31 +121,36 @@ def lambda_a(y, args):
     return (
         args["lambda_0"]  # Baseline test rate
         + args["c"]  # contacts
-        * (1 - m(args))
+        * (1 - m(y, args))
         * args["beta_HIV"]
-        * args["H"]
-        * (1 - args["P_HIV"])  # HIV dependent term
+        * y["H"]
+        * (1 - y["P_HIV"])  # HIV dependent term
         + args["lambda_P"]
-        * args["P_HIV"]  # Proportional infection rate due to HIV prevalence
+        * y["P_HIV"]  # Proportional infection rate due to HIV prevalence
     )
 
 
 # Function to calculate STI infection rate
 def beta_STI(y, args):
     logger.debug("Calculating beta_STI")
-    return args["beta_STI"] * ((1 - m(args)) * (1 - y["P"]) + y["P"])
+    return args["beta_STI"] * ((1 - m(y, args)) * (1 - y["P_HIV"]) + y["P_HIV"])
 
 
 # Function to calculate HIV infection rate
-def beta_HIV(args):
+def beta_HIV(y, args):
     logger.debug("Calculating beta_HIV")
-    return args["beta_HIV"] * (1 - m(args))
+    return args["beta_HIV"] * (1 - m(y, args))
 
 
 # Function to calculate effective [TODO: name?]
 def phi_H_eff(y, args):
     logger.debug("Calculating phi_H_eff")
-    return y["phi_H"] * (y["S_STI"] + y["P"])  # TODO: S_STI or S_HIV?
+    Phi = (
+        args["phi_min"] * args["phi_max"] * jax.numpy.exp(args["phi_r"] * y["H"])
+    ) / (
+        args["phi_min"] * (jax.numpy.exp(args["phi_r"] * y["H"]) - 1) + args["phi_max"]
+    )
+    return Phi * (y["S_HIV"] + y["P_HIV"])
 
 
 # Main model function that defines the differential equations of the system
@@ -153,22 +158,24 @@ def model(t, y, args):
     logger.debug("Defining the differential equations of the system HIVandSTI")
     cm = icomo.CompModel(y)  # Initialize the compartmental model
 
+    (prep_supply, args) = args  # unpacking the time dependent prep_supply and rest of the args
+
     # Basic HIV dynamics
-    cm.flow("S_HIV", "E_HIV", beta_HIV(args) * y["I_HIV"])  # Susceptible to exposed
+    cm.flow("S_HIV", "E_HIV", beta_HIV(y, args) * y["I_HIV"])  # Susceptible to exposed
     cm.flow("E_HIV", "I_HIV", args["rho"])  # Exposed to infected
-    cm.flow("I_HIV", "T_HIV", args["lambda_s"])  # Infected to tested and treatment
+    cm.flow("I_HIV", "T_HIV", args["lambda_ARV"])  # Infected to tested and treatment
     cm.flow(
         "T_HIV", "I_HIV", args["nu"]
     )  # Testes and treated to infected, dropout/ need of new testing
     cm.flow(
-        "P", "S_HIV", args["alpha"] * (phi_H_eff(y, args) / y["P"] + 1)
-    )  # Protected to tested and treatment
+        "P_HIV", "S_HIV", args["alpha"] * (prep_supply(t)*phi_H_eff(y, args) -y["P_HIV"]) /y["S_HIV"]
+    )  # Protected to tested and treatment  # TODO: double check everything here
 
     # Vital dynamics HIV (natural death or other forms of removal)
     cm.flow("E_HIV", "S_HIV", args["mu"])  # Death/removal from exposed
     cm.flow("I_HIV", "S_HIV", args["mu"])  # Death/removal from infected
     cm.flow("T_HIV", "S_HIV", args["mu"])  # Death/removal from treatment
-    cm.flow("P", "S_HIV", args["mu"])  # Death/removal from protected
+    cm.flow("P_HIV", "S_HIV", args["mu"])  # Death/removal from protected
 
     # Basic STI dynamics
     cm.flow(
@@ -200,11 +207,6 @@ def model(t, y, args):
     cm._add_dy_to_comp("h", h)
     cm._add_dy_to_comp("H", H)
 
-    # phi_H # TODO: check if implemented correctly
-    cm._add_dy_to_comp(
-        "phi_H", args["r"] * y["phi_H"] * (1 - y["phi_H"] / args["phi_max"])
-    )
-
     # Return the differential changes
     return cm.dy
 
@@ -220,6 +222,7 @@ def setup_model(args, y0):
         ts_out=ts,  # Output time points
         t_0=min(ts),  # Initial time point
         ts_solver=ts,  # Time points for the solver to use
+        ts_arg=ts,
     )
 
     # Get the integration function for the model
