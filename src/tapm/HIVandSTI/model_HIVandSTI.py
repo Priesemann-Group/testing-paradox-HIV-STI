@@ -117,16 +117,22 @@ def m(y, args):
 
 # Function to calculate the testing rate of STI
 def lambda_a(y, args):
-    logger.debug("Calculating testing rate of STI")
+    logger.debug("Calculating testing rate of STI asymptomatic")
     return (
-        args["lambda_0"]  # Baseline test rate
-        + args["c"]  # contacts
+        args["c"]  # contacts
         * (1 - m(y, args))
         * args["beta_HIV"]
         * y["H"]
         * (1 - y["P_HIV"])  # HIV dependent term
         + args["lambda_P"]
         * y["P_HIV"]  # Proportional infection rate due to HIV prevalence
+    )
+
+def lambda_s(y, args):
+    logger.debug("Calculating testing rate of STI symptomatic")
+    return (
+        lambda_a(y, args)
+        + args["lambda_0"]
     )
 
 
@@ -164,12 +170,10 @@ def model(t, y, args):
     cm.flow("S_HIV", "E_HIV", beta_HIV(y, args) * y["I_HIV"])  # Susceptible to exposed
     cm.flow("E_HIV", "I_HIV", args["rho"])  # Exposed to infected
     cm.flow("I_HIV", "T_HIV", args["lambda_ARV"])  # Infected to tested and treatment
-    cm.flow(
-        "T_HIV", "I_HIV", args["nu"]
-    )  # Testes and treated to infected, dropout/ need of new testing
+#    cm.flow("T_HIV", "I_HIV", args["nu"])  # Testes and treated to infected, dropout/ need of new testing
     cm.flow(
         "S_HIV", "P_HIV", args["alpha"] * (prep_supply(t)*phi_H_eff(y, args) -y["P_HIV"]) /y["S_HIV"]
-    )  # Protected to tested and treatment  # TODO: double check everything here
+    )  # Shifting between Susceptible and Protected
 
     # Vital dynamics HIV (natural death or other forms of removal)
     cm.flow("E_HIV", "S_HIV", args["mu"])  # Death/removal from exposed
@@ -182,8 +186,7 @@ def model(t, y, args):
         "S_STI", "Ia_STI", args["psi"] * beta_STI(y, args) * (y["Ia_STI"] + y["Is_STI"])
     )  # Susceptible to asymptomatic
     cm.flow(
-        "S_STI",
-        "Is_STI",
+        "S_STI", "Is_STI",
         (1 - args["psi"]) * beta_STI(y, args) * (y["Ia_STI"] + y["Is_STI"]),
     )  # Susceptible to symptomatic
     cm.flow(
@@ -192,7 +195,7 @@ def model(t, y, args):
     cm.flow(
         "Ia_STI", "T_STI", lambda_a(y, args)
     )  # Asymptomatic to tested and treatment
-    cm.flow("Is_STI", "T_STI", lambda_a(y, args))  # Symptomatic to tested and treatment
+    cm.flow("Is_STI", "T_STI", lambda_s(y, args))  # Symptomatic to tested and treatment
     cm.flow(
         "T_STI", "S_STI", args["gammaT_STI"]
     )  # Treatment to susceptible (immunity loss)
@@ -203,7 +206,7 @@ def model(t, y, args):
     cm.flow("T_STI", "S_STI", args["mu"])  # Death/removal from treatment
 
     # Hazard dynamics # TODO: check if implemented correctly
-    h, H = icomo.delayed_copy(y["I_HIV"], [y["h"], y["H"]], args["tau"])
+    h, H = icomo.delayed_copy(y["T_HIV"], [y["h"], y["H"]], args["tau"])
     cm._add_dy_to_comp("h", h)
     cm._add_dy_to_comp("H", H)
 
