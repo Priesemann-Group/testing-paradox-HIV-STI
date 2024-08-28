@@ -168,7 +168,7 @@ def model(t, y, args):
         "T_HIV", "I_HIV", args["nu"]
     )  # Testes and treated to infected, dropout/ need of new testing
     cm.flow(
-        "P_HIV", "S_HIV", args["alpha"] * (prep_supply(t)*phi_H_eff(y, args) -y["P_HIV"]) /y["S_HIV"]
+        "S_HIV", "P_HIV", args["alpha"] * (prep_supply(t)*phi_H_eff(y, args) -y["P_HIV"]) /y["S_HIV"]
     )  # Protected to tested and treatment  # TODO: double check everything here
 
     # Vital dynamics HIV (natural death or other forms of removal)
