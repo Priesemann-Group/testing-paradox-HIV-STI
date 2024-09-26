@@ -11,7 +11,7 @@ args = {
     "mu": 1.0 / 45.0 / 360.0,  # Natural death rate per day [Checked]
     "gamma_STI": 1.0 / 1.32 / 360.0,  # Recovery rate from asymptomatic STI per day [Checked]
     "gammaT_STI": 1.0 / 7.0,  # Recovery rate from treated STI per day [Checked, try with 1/7]
-    "lambda_0": 1 / 14.0,  # Baseline test rate for symptomatic STI [Checked]
+    "lambda_s": 1 / 14.0,  # Baseline test rate for symptomatic STI [Checked]
     "lambda_P": 1 / 360,  # Infection rate due to HIV prevalence [Checked]
     "lambda_ARV": 0.3567,  # ARV therapy uptake rate
     "psi": 0.85,  # Proportion of asymptomatic infections [Checked]
@@ -26,6 +26,7 @@ args = {
     "phi_min": 0.1,  # Minimal PrEP uptake
     "phi_max": 0.5,  # Maximum PrEP uptake
     "phi_r": 40.,  # PrEP fixpoint change speed  # TODO: realy? calculatable?
+    "Sigma": 0.01/365, # Influx
 }
 args["alpha"] = -np.log(1-args["phi_min"]) # PrEP adoption rate
 
