@@ -26,7 +26,7 @@ args = {
     "phi_min": 0.1,  # Minimal PrEP uptake
     "phi_max": 0.5,  # Maximum PrEP uptake
     "phi_r": 40.,  # PrEP fixpoint change speed  # TODO: realy? calculatable?
-    "Sigma": 0,#0.01/365, # Influx
+    "Sigma": 0.01/365, # Influx
     "Phi":  1.0 / 45.0 / 360.0# recruitment rate, same as mu
 }
 args["alpha"] = -np.log(1-args["phi_min"]) # PrEP adoption rate
