@@ -23,6 +23,7 @@ args = {
     "min_exp": 0.0,  # Minimum value for the exponential modulating factor
     "max_exp": 1.0,  # Maximum value for the exponential modulating factor
     "tau_exp": 0.2,  # Time constant for the exponential modulating factor
+    "Sigma": 0.01/365, # Influx
 }
 
 # Initial state of the compartments
