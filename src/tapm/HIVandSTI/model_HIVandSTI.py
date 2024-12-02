@@ -27,38 +27,38 @@ N04 = 0.071*N0 # initial population size of risk group 4
 N0s = [N01,N02,N03,N04]
 mu = 1/45 # per year, rate of recruitment to sexually active population
 Omega = 1-0.86 # PrEP effectiveness, baseline
-c = [0.13,1.43,5.44,18.21] # per year, average number of partners in risk group l
+c = [0.13 / 360.0,1.43 / 360.0,5.44 / 360.0,18.21 / 360.0] # per year, average number of partners in risk group l
 h = [0.62,0.12,0.642,0.0] # infectivity of untreated individuals in stage k of infection
 epsilon = 0.01 # infectivity of treated individuals
 epsilonP = h[1]/2 # infectivity of MSM infected on PrEP
 Lambda = 0.25 # transmission prob. per partnership
 omega = 0.5 # mixing parameter, (0: assortative, 1: proportionate mixing)
-Phi = -jnp.log(1-0.05) # per year, annual ART dropout rate
-tau = -jnp.log(1-0.3) # per year, annual ART uptake rate
-tauP1 = -jnp.log(1-0.95) # per year, annual ART uptake rate for MSM infected on PrEP
+Phi = -jnp.log(1-0.05) / 360.0 # per year, annual ART dropout rate
+tau = -jnp.log(1-0.3) / 360.0 # per year, annual ART uptake rate
+tauP1 = -jnp.log(1-0.95) / 360.0 # per year, annual ART uptake rate for MSM infected on PrEP
 tauP2 = tauP1
 tauP3 = tauP1
 tauP4 = tauP1
 tauPs = [tau,tauP1,tauP2,tauP3,tauP4]
-rho1 = 1/0.142 # per year, rate of transition from stage 1 to 2 for untreated individuals
-rho2 = 1/8.439 # per year, rate of transition from stage 2 to 3 for untreated individuals
-rho3 = 1/1.184 # per year, rate of transition from stage 3 to 4 for untreated individuals
-rho4 = 1/1.316 # per year, mortality rate for untreated individuals
+rho1 = 1/0.142 / 360.0 # per year, rate of transition from stage 1 to 2 for untreated individuals
+rho2 = 1/8.439 / 360.0 # per year, rate of transition from stage 2 to 3 for untreated individuals
+rho3 = 1/1.184 / 360.0 # per year, rate of transition from stage 3 to 4 for untreated individuals
+rho4 = 1/1.316 / 360.0 # per year, mortality rate for untreated individuals
 rhos = [rho1,rho2,rho3,rho4]
-gamma1 = 1/8.21 # per year, rate of transition from stage 1 to 2 for tretaed individuals
-gamma2 = 1/54.0 # per year, rate of transition from stage 2 to 3 for treated individuals
-gamma3 = 1/2.463 # per year, rate of transition from stage 3 to 4 for treated individuals
-gamma4 = 1/2.737 # per year, mortality rate for treated individuals
+gamma1 = 1/8.21 / 360.0 # per year, rate of transition from stage 1 to 2 for tretaed individuals
+gamma2 = 1/54.0 / 360.0 # per year, rate of transition from stage 2 to 3 for treated individuals
+gamma3 = 1/2.463 / 360.0 # per year, rate of transition from stage 3 to 4 for treated individuals
+gamma4 = 1/2.737 / 360.0 # per year, mortality rate for treated individuals
 gammas = [gamma1,gamma2,gamma3,gamma4]
-Kon1 = -jnp.log(1-PrEPuptake_rg1) # annual PrEP uptake rate in risk group 1
-Kon2 = -jnp.log(1-PrEPuptake_rg2) # annual PrEP uptake rate in risk group 2
-Kon3 = -jnp.log(1-PrEPuptake_rg3) # annual PrEP uptake rate in risk group 3
-Kon4 = -jnp.log(1-PrEPuptake_rg4) # annual PrEP uptake rate in risk group 4
+Kon1 = -jnp.log(1-PrEPuptake_rg1) / 360.0 # annual PrEP uptake rate in risk group 1
+Kon2 = -jnp.log(1-PrEPuptake_rg2) / 360.0 # annual PrEP uptake rate in risk group 2
+Kon3 = -jnp.log(1-PrEPuptake_rg3) / 360.0 # annual PrEP uptake rate in risk group 3
+Kon4 = -jnp.log(1-PrEPuptake_rg4) / 360.0 # annual PrEP uptake rate in risk group 4
 Kons = [Kon1,Kon2,Kon3,Kon4]
-Koff1 = 1/5.0 # per year, average duration of taing PrEP in risk group 1
-Koff2 = Koff1
-Koff3 = Koff1
-Koff4 = Koff1
+Koff1 = 1/5.0 * 360.0 # per year, average duration of taing PrEP in risk group 1
+Koff2 = Koff1 * 360.0
+Koff3 = Koff1 * 360.0
+Koff4 = Koff1 * 360.0
 Koffs = [Koff1,Koff2,Koff3,Koff4]
 
 
@@ -183,6 +183,7 @@ def calculate_N(y): # number of people per risk group for a given state y (which
     N2 = jnp.sum(jnp.array([y["S2"],y["SP2"],y["I21"],y["IP21"],y["I22"],y["I23"],y["I24"],y["A21"],y["A22"],y["A23"],y["A24"]]))
     N3 = jnp.sum(jnp.array([y["S3"],y["SP3"],y["I31"],y["IP31"],y["I32"],y["I33"],y["I34"],y["A31"],y["A32"],y["A33"],y["A34"]]))
     N4 = jnp.sum(jnp.array([y["S4"],y["SP4"],y["I41"],y["IP41"],y["I42"],y["I43"],y["I44"],y["A41"],y["A42"],y["A43"],y["A44"]]))
+    jnp.isnan(jnp.array([N1,N2,N3,N4]))
     return [N1,N2,N3,N4]
 
 def M(l,ll,y,args): # mixing matrix
