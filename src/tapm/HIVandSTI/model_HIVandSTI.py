@@ -30,7 +30,7 @@ Omega = 1-0.86 # PrEP effectiveness, baseline
 c = [0.13/360.0, 1.43/360.0, 5.44/360.0, 18.21/360.0] # per year, average number of partners in risk group l
 h = [0.62,0.12,0.642,0.0] # infectivity of untreated individuals in stage k of infection
 epsilon = 0.01 # infectivity of treated individuals
-epsilonP = h[1]/2 # infectivity of MSM infected on PrEP
+epsilonP = h[0]/2 # infectivity of MSM infected on PrEP
 Lambda = 0.25 # transmission prob. per partnership
 omega = 0.5 # mixing parameter, (0: assortative, 1: proportionate mixing)
 Phi = -jnp.log(1-0.05) / 360.0 # per year, annual ART dropout rate
@@ -39,7 +39,7 @@ tauP1 = -jnp.log(1-0.95) / 360.0 # per year, annual ART uptake rate for MSM infe
 tauP2 = tauP1
 tauP3 = tauP1
 tauP4 = tauP1
-tauPs = [tau,tauP1,tauP2,tauP3,tauP4]
+tauPs = [tauP1,tauP2,tauP3,tauP4]
 rho1 = 1/0.142 / 360.0 # per year, rate of transition from stage 1 to 2 for untreated individuals
 rho2 = 1/8.439 / 360.0 # per year, rate of transition from stage 2 to 3 for untreated individuals
 rho3 = 1/1.184 / 360.0 # per year, rate of transition from stage 3 to 4 for untreated individuals
@@ -55,7 +55,7 @@ Kon2 = -jnp.log(1-PrEPuptake_rg2) / 360.0 # annual PrEP uptake rate in risk grou
 Kon3 = -jnp.log(1-PrEPuptake_rg3) / 360.0 # annual PrEP uptake rate in risk group 3
 Kon4 = -jnp.log(1-PrEPuptake_rg4) / 360.0 # annual PrEP uptake rate in risk group 4
 Kons = [Kon1,Kon2,Kon3,Kon4]
-Koff1 = 1/5.0 * 360.0 # per year, average duration of taing PrEP in risk group 1
+Koff1 = 1/5.0 / 360.0 # per year, average duration of taing PrEP in risk group 1
 Koff2 = Koff1 
 Koff3 = Koff1 
 Koff4 = Koff1 
@@ -157,7 +157,7 @@ y0 = {
     "A44": 0.05 * N04,
 
     "H": 0.2 * N0, # hazard
-    "H1": 0.2 * N01, # helper function
+    #"H1": 0.2 * N01, # helper function
     
     # STI starting values
     "S1_STI": 0.85 * N01,
@@ -181,44 +181,42 @@ y0 = {
 
 args = dict(N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, beta_HIV=beta_HIV, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, P_HIV=P_HIV, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact)
 
-def calculate_N(y): # number of people per risk group for a given state y (which means at a given time)
+#checked
+def calculate_N(y): # number of people per risk group for a given state y (which means at a given time) for HIV
     N1 = jnp.sum(jnp.array([y["S1"],y["SP1"],y["I11"],y["IP11"],y["I12"],y["I13"],y["I14"],y["A11"],y["A12"],y["A13"],y["A14"]]))
     N2 = jnp.sum(jnp.array([y["S2"],y["SP2"],y["I21"],y["IP21"],y["I22"],y["I23"],y["I24"],y["A21"],y["A22"],y["A23"],y["A24"]]))
     N3 = jnp.sum(jnp.array([y["S3"],y["SP3"],y["I31"],y["IP31"],y["I32"],y["I33"],y["I34"],y["A31"],y["A32"],y["A33"],y["A34"]]))
     N4 = jnp.sum(jnp.array([y["S4"],y["SP4"],y["I41"],y["IP41"],y["I42"],y["I43"],y["I44"],y["A41"],y["A42"],y["A43"],y["A44"]]))
-    jnp.isnan(jnp.array([N1,N2,N3,N4]))
-    return [N1,N2,N3,N4]
+    return jnp.array([N1,N2,N3,N4])
 
-def M(l,ll,y,args): # mixing matrix
+#checked
+def M(l1,l2,y,args): # mixing matrix
     c = args["c"] # unpack args we need
     omega = args["omega"]
-    l = l-1 # because we start counting from 0
-    ll = ll-1
-    Ns = jnp.array(calculate_N(y))
-    #print("L and ll in function M", l,ll)
-    Ns_array = jnp.array(Ns)
+    l1 = l1-1 # because we start counting from 0
+    l2 = l2-1
+    Ns = calculate_N(y)
     c_array = jnp.array(c)
-    return omega*c_array[ll]*Ns_array[ll]/(jnp.sum(c_array*Ns_array, axis=0)) + (1-omega)*jnp.where(l == ll, 1, 0)
+    return omega*c_array[l2]*Ns[l2]/(jnp.sum(jnp.multiply(c_array,Ns))) + (1-omega)*jnp.where(l1 == l2, 1, 0)
 
+# checked
 def JP(l,y,args): # force of infection per year in group l
-    h = args["h"] # unpack args we need
+    h = jnp.array(args["h"]) # unpack args we need
     epsilon = args["epsilon"]
     epsilonP = args["epsilonP"]
     Lambda = args["Lambda"]
-    c = args["c"]
-    Is = jnp.array([[y["I11"], y["I12"], y["I13"], y["I14"]],[y["I21"], y["I22"], y["I23"], y["I24"]],[y["I31"], y["I32"], y["I33"], y["I34"]],[y["I41"], y["I42"], y["I43"], y["I44"]]])
-    IPs = jnp.array([y["IP11"], y["IP21"], y["IP31"], y["IP41"]])
+    c = jnp.array(args["c"])
+    Is_all = jnp.array([[y["I11"], y["I12"], y["I13"], y["I14"]],[y["I21"], y["I22"], y["I23"], y["I24"]],[y["I31"], y["I32"], y["I33"], y["I34"]],[y["I41"], y["I42"], y["I43"], y["I44"]]])
+    Is_l = Is_all[l-1] # l-1 because we start counting from 0
+    IPs_l1 = jnp.array([y["IP11"],y["IP21"],y["IP31"],y["IP41"]])
     N = calculate_N(y)
-    As = jnp.array([[y["A11"], y["A12"], y["A13"], y["A14"]],[y["A21"], y["A22"], y["A23"], y["A24"]],[y["A31"], y["A32"], y["A33"], y["A34"]],[y["A41"], y["A42"], y["A43"], y["A44"]]])
-    Ms = jnp.array([M(l,1,y,args),M(l,2,y,args),M(l,3,y,args),M(l,4,y,args)])
-    h_array = jnp.array(h)
-    innersums = [jnp.sum(h_array*Is[ll]/N[ll] + epsilon*As[ll]/N[ll]) for ll in range(4)]
-    epsilonP_array = jnp.array(epsilonP)
-    N_array = jnp.array(N)
-    innersums_array = jnp.array(innersums)
-    sum = jnp.sum((Ms*(epsilonP_array*IPs/N_array + innersums_array)))
-    c_array = jnp.array(c)
-    JP = Lambda * c_array[l-1] * sum
+    As_all = jnp.array([[y["A11"], y["A12"], y["A13"], y["A14"]],[y["A21"], y["A22"], y["A23"], y["A24"]],[y["A31"], y["A32"], y["A33"], y["A34"]],[y["A41"], y["A42"], y["A43"], y["A44"]]])
+    As_l = As_all[l-1]
+    Ms_l = jnp.array([M(l,1,y,args),M(l,2,y,args),M(l,3,y,args),M(l,4,y,args)])
+    
+    innersums = jnp.array([jnp.sum(h*Is_all[ll]/N[ll] + epsilon*As_all[ll]/N[ll]) for ll in range(4)]) # sum over k for different l
+    sum = jnp.sum(Ms_l*(jnp.add(epsilonP*IPs_l1/N,innersums))) # sum over l'
+    JP = Lambda * c[l-1] * sum
     return JP
 
 # Configure logging
@@ -443,6 +441,7 @@ def main_model(t, y, args):
     Kons, N0s, mu, Omega, Koffs, tau, rhos, tauPs, Phi, gammas = args['Kons'], args['N0s'], args['mu'], args['Omega'], args['Koffs'], args['tau'], args['rhos'], args['tauPs'], args['Phi'], args['gammas']
     
     # HIV dynamics-------------------------------------------------------------------------------------------------------------------------------
+    # HIV dynamics double checked, not the functions that are called though, just the terms
     # Flow out of S compartments
     cm.flow("S1", "I11", JP(1,y,args))
     cm.flow("S2", "I21", JP(2,y,args))
