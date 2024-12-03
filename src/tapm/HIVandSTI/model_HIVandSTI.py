@@ -12,9 +12,9 @@ logged_exp_logis = False
 
 
 # Parameters we have to decide
-PrEPuptake_rg1 = 0.01 # annual PrEP uptake in risk group 1 (fraction)
-PrEPuptake_rg2 = 0.025 # annual PrEP uptake in risk group 2 (fraction)
-PrEPuptake_rg3 = 0.05 # annual PrEP uptake in risk group 3 (fraction)
+PrEPuptake_rg1 = 0.1 # annual PrEP uptake in risk group 1 (fraction)
+PrEPuptake_rg2 = 0.1 # annual PrEP uptake in risk group 2 (fraction)
+PrEPuptake_rg3 = 0.1 # annual PrEP uptake in risk group 3 (fraction)
 PrEPuptake_rg4 = 0.1 # annual PrEP uptake in risk group 4 (fraction)
 
 
@@ -25,9 +25,9 @@ N02 = 0.353*N0 # initial population size of risk group 2
 N03 = 0.125*N0 # initial population size of risk group 3
 N04 = 0.071*N0 # initial population size of risk group 4
 N0s = [N01,N02,N03,N04]
-mu = 1/45 # per year, rate of recruitment to sexually active population
+mu = 1/45 /360.0 # per year, rate of recruitment to sexually active population
 Omega = 1-0.86 # PrEP effectiveness, baseline
-c = [0.13 / 360.0,1.43 / 360.0,5.44 / 360.0,18.21 / 360.0] # per year, average number of partners in risk group l
+c = [0.13/360.0, 1.43/360.0, 5.44/360.0, 18.21/360.0] # per year, average number of partners in risk group l
 h = [0.62,0.12,0.642,0.0] # infectivity of untreated individuals in stage k of infection
 epsilon = 0.01 # infectivity of treated individuals
 epsilonP = h[1]/2 # infectivity of MSM infected on PrEP
@@ -56,9 +56,9 @@ Kon3 = -jnp.log(1-PrEPuptake_rg3) / 360.0 # annual PrEP uptake rate in risk grou
 Kon4 = -jnp.log(1-PrEPuptake_rg4) / 360.0 # annual PrEP uptake rate in risk group 4
 Kons = [Kon1,Kon2,Kon3,Kon4]
 Koff1 = 1/5.0 * 360.0 # per year, average duration of taing PrEP in risk group 1
-Koff2 = Koff1 * 360.0
-Koff3 = Koff1 * 360.0
-Koff4 = Koff1 * 360.0
+Koff2 = Koff1 
+Koff3 = Koff1 
+Koff4 = Koff1 
 Koffs = [Koff1,Koff2,Koff3,Koff4]
 
 
@@ -80,7 +80,7 @@ m_eps = 0.01  # Small constant for smoothing
 Phi_r = 40.0  # Not used in the current model
 H_tau = 20.0  # Not used in the current model
 contact = 50.0  # Scaling factor for HIV interaction term
-H = 0.1  # Initial HIV prevalence
+#H = 0.1  # Initial HIV prevalence
 P_HIV = 0.25  # Initial proportion of HIV positive individuals
 min_exp = 0.0  # Minimum value for the exponential modulating factor
 max_exp = 1.0  # Maximum value for the exponential modulating factor
@@ -155,6 +155,8 @@ y0 = {
     "A24": 0.05 * N02,
     "A34": 0.05 * N03,
     "A44": 0.05 * N04,
+
+    "H": 0.2 * N0, # hazard
     
     # STI starting values
     "S1_STI": 0.85 * N01,
@@ -176,7 +178,7 @@ y0 = {
 }
 
 
-args = dict(N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, beta_HIV=beta_HIV, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, H=H, P_HIV=P_HIV, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact)
+args = dict(N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, beta_HIV=beta_HIV, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, P_HIV=P_HIV, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact)
 
 def calculate_N(y): # number of people per risk group for a given state y (which means at a given time)
     N1 = jnp.sum(jnp.array([y["S1"],y["SP1"],y["I11"],y["IP11"],y["I12"],y["I13"],y["I14"],y["A11"],y["A12"],y["A13"],y["A14"]]))
@@ -349,31 +351,14 @@ def J4(y, args):
     return JP
     
 # Function to calculate the testing rate of STI
-def lambda_a(args):
-    """
-    Calculate the testing rate of assymptomatic STI.
-
-    Args:
-        args (dict): A dictionary containing the following parameters:
-            - lambda_0 (float): Baseline test rate
-            - c (float): Constant term
-            - m (function): Function to calculate m value
-            - beta_HIV (float): HIV transmission rate
-            - H (float): Number of susceptible individuals
-            - P_HIV (float): HIV prevalence
-
-    Returns:
-        float: The testing rate of STI.
-
-    """
-    logger.debug("Calculating testing rate of STI")
+def lambda_a(y,args):
     contact = jnp.array(args["contact"])
     return (
         args["lambda_0"]  # Baseline test rate
         + contact
-        * (1 - m(args, H=None))
+        * (1 - m(args, H=y["H"]))
         * args["beta_HIV"]
-        * args["H"]
+        * y["H"]
         * (1 - args["P_HIV"])  # HIV dependent term
         + args["lambda_P"]
         * args["P_HIV"]  # Proportional infection rate due to HIV prevalence
@@ -386,10 +371,9 @@ def infect_ia1(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J1(y, args)
     )
-
 
 # Function to calculate infection from symptomatic STI individuals
 def infect_is1(y, args):
@@ -397,7 +381,7 @@ def infect_is1(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J1(y, args)
     )
 
@@ -406,18 +390,16 @@ def infect_ia2(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J2(y, args)
     )
 
-
-# Function to calculate infection from symptomatic STI individuals
 def infect_is2(y, args):
     logger.debug("Calculating infection from symptomatic STI individuals")
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J2(y, args)
     )
 
@@ -426,48 +408,40 @@ def infect_ia3(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J3(y, args)
     )
 
-
-# Function to calculate infection from symptomatic STI individuals
 def infect_is3(y, args):
-    logger.debug("Calculating infection from symptomatic STI individuals")
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J3(y, args)
     )
 
 def infect_ia4(y, args):
-    logger.debug("Calculating infection from asymptomatic STI individuals")
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J4(y, args)
     )
 
-
-# Function to calculate infection from symptomatic STI individuals
 def infect_is4(y, args):
-    logger.debug("Calculating infection from symptomatic STI individuals")
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=None) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
         * J4(y, args)
     )
 
 def main_model(t, y, args):
     cm = icomo.CompModel(y)  # Initialize the compartmental model
-    dy = {"S1": 0, "S2": 0, "S3": 0, "S4":0, "SP1":0, "SP2":0, "SP3":0, "SP4":0, "I11":0, "I21":0, "I31":0, "I41":0, "IP11":0, "IP21":0, "IP31":0, "IP41":0, "I12":0, "I22":0, "I32":0, "I42":0, "I13":0, "I23":0, "I33":0, "I43":0, "I14":0, "I24":0, "I34":0, "I44":0, "A11":0, "A21":0, "A31":0, "A41":0, "A12":0, "A22":0, "A32":0, "A42":0, "A13":0, "A23":0, "A33":0, "A43":0, "A14":0, "A24":0, "A34":0, "A44":0, "S1_STI":0, "S2_STI":0, "S3_STI":0, "S4_STI":0, "Ia1_STI":0, "Ia2_STI":0, "Ia3_STI":0, "Ia4_STI":0, "Is1_STI":0, "Is2_STI":0, "Is3_STI":0, "Is4_STI":0, "T1_STI":0, "T2_STI":0, "T3_STI":0, "T4_STI":0}
     # unpack args
     Kons, N0s, mu, Omega, Koffs, tau, rhos, tauPs, Phi, gammas = args['Kons'], args['N0s'], args['mu'], args['Omega'], args['Koffs'], args['tau'], args['rhos'], args['tauPs'], args['Phi'], args['gammas']
-
-    # HIV dynamics
+    
+    # HIV dynamics-------------------------------------------------------------------------------------------------------------------------------
     # Flow out of S compartments
     cm.flow("S1", "I11", JP(1,y,args))
     cm.flow("S2", "I21", JP(2,y,args))
@@ -477,10 +451,10 @@ def main_model(t, y, args):
     cm.flow("S2", "SP2", Kons[1])
     cm.flow("S3", "SP3", Kons[2])
     cm.flow("S4", "SP4", Kons[3])
-    dy["S1"] = dy["S1"] - mu*y["S1"] + mu*N0s[0]
-    dy["S2"] = dy["S2"] - mu*y["S2"] + mu*N0s[1]
-    dy["S3"] = dy["S3"] - mu*y["S3"] + mu*N0s[2]
-    dy["S4"] = dy["S4"] - mu*y["S4"] + mu*N0s[3]
+    cm.dy["S1"] = cm.dy["S1"] - mu*y["S1"] + mu*N0s[0]
+    cm.dy["S2"] = cm.dy["S2"] - mu*y["S2"] + mu*N0s[1]
+    cm.dy["S3"] = cm.dy["S3"] - mu*y["S3"] + mu*N0s[2]
+    cm.dy["S4"] = cm.dy["S4"] - mu*y["S4"] + mu*N0s[3]
     # Flow out of SP compartments
     cm.flow("SP1", "IP11", Omega*JP(1,y,args))
     cm.flow("SP2", "IP21", Omega*JP(2,y,args))
@@ -490,145 +464,150 @@ def main_model(t, y, args):
     cm.flow("SP2", "S2", Koffs[1])
     cm.flow("SP3", "S3", Koffs[2])
     cm.flow("SP4", "S4", Koffs[3])
-    dy["SP1"] = dy["SP1"] - mu*y["SP1"]
-    dy["SP2"] = dy["SP2"] - mu*y["SP2"]
-    dy["SP3"] = dy["SP3"] - mu*y["SP3"]
-    dy["SP4"] = dy["SP4"] - mu*y["SP4"]
+    cm.dy["SP1"] = cm.dy["SP1"] - mu*y["SP1"]
+    cm.dy["SP2"] = cm.dy["SP2"] - mu*y["SP2"]
+    cm.dy["SP3"] = cm.dy["SP3"] - mu*y["SP3"]
+    cm.dy["SP4"] = cm.dy["SP4"] - mu*y["SP4"]
     # Flow out of Il1 compartments
     cm.flow("I11", "A11", tau)
     cm.flow("I21", "A21", tau)
     cm.flow("I31", "A31", tau)
     cm.flow("I41", "A41", tau)
-    dy["I11"] = dy["I11"] - (mu + rhos[0])*y["I11"]
-    dy["I21"] = dy["I21"] - (mu + rhos[0])*y["I21"]
-    dy["I31"] = dy["I31"] - (mu + rhos[0])*y["I31"]
-    dy["I41"] = dy["I41"] - (mu + rhos[0])*y["I41"]
+    cm.dy["I11"] = cm.dy["I11"] - (mu + rhos[0])*y["I11"]
+    cm.dy["I21"] = cm.dy["I21"] - (mu + rhos[0])*y["I21"]
+    cm.dy["I31"] = cm.dy["I31"] - (mu + rhos[0])*y["I31"]
+    cm.dy["I41"] = cm.dy["I41"] - (mu + rhos[0])*y["I41"]
     # Flow out of IPl1 compartments
     cm.flow("IP11", "A11", tauPs[0])
     cm.flow("IP21", "A21", tauPs[1])
     cm.flow("IP31", "A31", tauPs[2])
     cm.flow("IP41", "A41", tauPs[3])
-    dy["IP11"] = dy["IP11"] - mu*y["IP11"]
-    dy["IP21"] = dy["IP21"] - mu*y["IP21"]
-    dy["IP31"] = dy["IP31"] - mu*y["IP31"]
-    dy["IP41"] = dy["IP41"] - mu*y["IP41"]
+    cm.dy["IP11"] = cm.dy["IP11"] - mu*y["IP11"]
+    cm.dy["IP21"] = cm.dy["IP21"] - mu*y["IP21"]
+    cm.dy["IP31"] = cm.dy["IP31"] - mu*y["IP31"]
+    cm.dy["IP41"] = cm.dy["IP41"] - mu*y["IP41"]
     # Flow out of Ilk compartments (k=2,3,4)
     # k=2
     cm.flow("I12", "A12", tau)
     cm.flow("I22", "A22", tau)
     cm.flow("I32", "A32", tau) 
     cm.flow("I42", "A42", tau)
-    dy["I12"] = dy["I12"] - (mu + rhos[1])*y["I12"] + rhos[0]*y["I11"]
-    dy["I22"] = dy["I22"] - (mu + rhos[1])*y["I22"] + rhos[0]*y["I21"]
-    dy["I32"] = dy["I32"] - (mu + rhos[1])*y["I32"] + rhos[0]*y["I31"]
-    dy["I42"] = dy["I42"] - (mu + rhos[1])*y["I42"] + rhos[0]*y["I41"]
+    cm.dy["I12"] = cm.dy["I12"] - (mu + rhos[1])*y["I12"] + rhos[0]*y["I11"]
+    cm.dy["I22"] = cm.dy["I22"] - (mu + rhos[1])*y["I22"] + rhos[0]*y["I21"]
+    cm.dy["I32"] = cm.dy["I32"] - (mu + rhos[1])*y["I32"] + rhos[0]*y["I31"]
+    cm.dy["I42"] = cm.dy["I42"] - (mu + rhos[1])*y["I42"] + rhos[0]*y["I41"]
     # k=3
     cm.flow("I13", "A13", tau)
     cm.flow("I23", "A23", tau)
     cm.flow("I33", "A33", tau)
     cm.flow("I43", "A43", tau)
-    dy["I13"] = dy["I13"] - (mu + rhos[2])*y["I13"] + rhos[1]*y["I12"]
-    dy["I23"] = dy["I23"] - (mu + rhos[2])*y["I23"] + rhos[1]*y["I22"]
-    dy["I33"] = dy["I33"] - (mu + rhos[2])*y["I33"] + rhos[1]*y["I32"]
-    dy["I43"] = dy["I43"] - (mu + rhos[2])*y["I43"] + rhos[1]*y["I42"]
+    cm.dy["I13"] = cm.dy["I13"] - (mu + rhos[2])*y["I13"] + rhos[1]*y["I12"]
+    cm.dy["I23"] = cm.dy["I23"] - (mu + rhos[2])*y["I23"] + rhos[1]*y["I22"]
+    cm.dy["I33"] = cm.dy["I33"] - (mu + rhos[2])*y["I33"] + rhos[1]*y["I32"]
+    cm.dy["I43"] = cm.dy["I43"] - (mu + rhos[2])*y["I43"] + rhos[1]*y["I42"]
     # k=4
     cm.flow("I14", "A14", tau)
     cm.flow("I24", "A24", tau)
     cm.flow("I34", "A34", tau)
     cm.flow("I44", "A44", tau)
-    dy["I14"] = dy["I14"] - (mu + rhos[3])*y["I14"] + rhos[2]*y["I13"]
-    dy["I24"] = dy["I24"] - (mu + rhos[3])*y["I24"] + rhos[2]*y["I23"]
-    dy["I34"] = dy["I34"] - (mu + rhos[3])*y["I34"] + rhos[2]*y["I33"]
-    dy["I44"] = dy["I44"] - (mu + rhos[3])*y["I44"] + rhos[2]*y["I43"]
+    cm.dy["I14"] = cm.dy["I14"] - (mu + rhos[3])*y["I14"] + rhos[2]*y["I13"]
+    cm.dy["I24"] = cm.dy["I24"] - (mu + rhos[3])*y["I24"] + rhos[2]*y["I23"]
+    cm.dy["I34"] = cm.dy["I34"] - (mu + rhos[3])*y["I34"] + rhos[2]*y["I33"]
+    cm.dy["I44"] = cm.dy["I44"] - (mu + rhos[3])*y["I44"] + rhos[2]*y["I43"]
     # Flow out of Al1 compartments
     cm.flow("A11", "I11", Phi)
     cm.flow("A21", "I21", Phi)
     cm.flow("A31", "I31", Phi)
     cm.flow("A41", "I41", Phi)
-    dy["A11"] = dy["A11"] - (mu + gammas[0])*y["A11"]
-    dy["A21"] = dy["A21"] - (mu + gammas[0])*y["A21"]
-    dy["A31"] = dy["A31"] - (mu + gammas[0])*y["A31"]
-    dy["A41"] = dy["A41"] - (mu + gammas[0])*y["A41"]
+    cm.dy["A11"] = cm.dy["A11"] - (mu + gammas[0])*y["A11"]
+    cm.dy["A21"] = cm.dy["A21"] - (mu + gammas[0])*y["A21"]
+    cm.dy["A31"] = cm.dy["A31"] - (mu + gammas[0])*y["A31"]
+    cm.dy["A41"] = cm.dy["A41"] - (mu + gammas[0])*y["A41"]
     # Flow out of Alk compartments (k=2,3,4)
     # k=2
     cm.flow("A12", "I12", Phi)
     cm.flow("A22", "I22", Phi)
     cm.flow("A32", "I32", Phi)
     cm.flow("A42", "I42", Phi)
-    dy["A12"] = dy["A12"] - (mu + gammas[1])*y["A12"] + gammas[0]*y["A11"]
-    dy["A22"] = dy["A22"] - (mu + gammas[1])*y["A22"] + gammas[0]*y["A21"]
-    dy["A32"] = dy["A32"] - (mu + gammas[1])*y["A32"] + gammas[0]*y["A31"]
-    dy["A42"] = dy["A42"] - (mu + gammas[1])*y["A42"] + gammas[0]*y["A41"]
+    cm.dy["A12"] = cm.dy["A12"] - (mu + gammas[1])*y["A12"] + gammas[0]*y["A11"]
+    cm.dy["A22"] = cm.dy["A22"] - (mu + gammas[1])*y["A22"] + gammas[0]*y["A21"]
+    cm.dy["A32"] = cm.dy["A32"] - (mu + gammas[1])*y["A32"] + gammas[0]*y["A31"]
+    cm.dy["A42"] = cm.dy["A42"] - (mu + gammas[1])*y["A42"] + gammas[0]*y["A41"]
     # k=3
     cm.flow("A13", "I13", Phi)
     cm.flow("A23", "I23", Phi)
     cm.flow("A33", "I33", Phi)
     cm.flow("A43", "I43", Phi)
-    dy["A13"] = dy["A13"] - (mu + gammas[2])*y["A13"] + gammas[1]*y["A12"]
-    dy["A23"] = dy["A23"] - (mu + gammas[2])*y["A23"] + gammas[1]*y["A22"]
-    dy["A33"] = dy["A33"] - (mu + gammas[2])*y["A33"] + gammas[1]*y["A32"]
-    dy["A43"] = dy["A43"] - (mu + gammas[2])*y["A43"] + gammas[1]*y["A42"]
+    cm.dy["A13"] = cm.dy["A13"] - (mu + gammas[2])*y["A13"] + gammas[1]*y["A12"]
+    cm.dy["A23"] = cm.dy["A23"] - (mu + gammas[2])*y["A23"] + gammas[1]*y["A22"]
+    cm.dy["A33"] = cm.dy["A33"] - (mu + gammas[2])*y["A33"] + gammas[1]*y["A32"]
+    cm.dy["A43"] = cm.dy["A43"] - (mu + gammas[2])*y["A43"] + gammas[1]*y["A42"]
     # k=4
     cm.flow("A14", "I14", Phi)
     cm.flow("A24", "I24", Phi)
     cm.flow("A34", "I34", Phi)
     cm.flow("A44", "I44", Phi)
-    dy["A14"] = dy["A14"] - (mu + gammas[3])*y["A14"] + gammas[2]*y["A13"]
-    dy["A24"] = dy["A24"] - (mu + gammas[3])*y["A24"] + gammas[2]*y["A23"]
-    dy["A34"] = dy["A34"] - (mu + gammas[3])*y["A34"] + gammas[2]*y["A33"]
-    dy["A44"] = dy["A44"] - (mu + gammas[3])*y["A44"] + gammas[2]*y["A43"]
-    ## STI dynamics
+    cm.dy["A14"] = cm.dy["A14"] - (mu + gammas[3])*y["A14"] + gammas[2]*y["A13"]
+    cm.dy["A24"] = cm.dy["A24"] - (mu + gammas[3])*y["A24"] + gammas[2]*y["A23"]
+    cm.dy["A34"] = cm.dy["A34"] - (mu + gammas[3])*y["A34"] + gammas[2]*y["A33"]
+    cm.dy["A44"] = cm.dy["A44"] - (mu + gammas[3])*y["A44"] + gammas[2]*y["A43"]
+
+    # hazard--------------------------------------------------------------------------------------------------------------------------------------------------------
+    #TODO i have no idea how to implement this
+    cm.flow("H", "S1", 0)
+
+    # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
     # Basic STI dynamics
     cm.flow("S1_STI", "Ia1_STI", infect_ia1(y, args)) # Susceptible to asymptomatic
     cm.flow("S1_STI", "Is1_STI", infect_is1(y, args)) # Susceptible to symptomatic
     cm.flow("Ia1_STI", "S1_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia1_STI", "T1_STI", lambda_a(args)) # Asymptomatic to tested and treatment
+    cm.flow("Ia1_STI", "T1_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
     cm.flow("Is1_STI", "T1_STI", args["lambda_s"]) # Symptomatic to tested and treatment
     cm.flow("T1_STI", "S1_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
     # Vital dynamics (New addition/removoval to/from risk group)
-    dy["S1_STI"] = dy["S1_STI"] - args["mu"] * y["S1_STI"] + args["mu"] * args["N0s"][0]
-    dy["Ia1_STI"] = dy["Ia1_STI"] - args["mu"] * y["Ia1_STI"]
-    dy["Is1_STI"] = dy["Is1_STI"] - args["mu"] * y["Is1_STI"] 
-    dy["T1_STI"] = dy["T1_STI"] - args["mu"] * y["T1_STI"]
     cm.flow("S2_STI", "Ia2_STI", infect_ia2(y, args)) # Susceptible to asymptomatic
     cm.flow("S2_STI", "Is2_STI", infect_is2(y, args)) # Susceptible to symptomatic
     cm.flow("Ia2_STI", "S2_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia2_STI", "T2_STI", lambda_a(args)) # Asymptomatic to tested and treatment
+    cm.flow("Ia2_STI", "T2_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
     cm.flow("Is2_STI", "T2_STI", args["lambda_s"]) # Symptomatic to tested and treatment
     cm.flow("T2_STI", "S2_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
+    cm.dy["S1_STI"] = cm.dy["S1_STI"] - mu * y["S1_STI"] + mu * N0s[0]
+    cm.dy["Ia1_STI"] = cm.dy["Ia1_STI"] - mu * y["Ia1_STI"]
+    cm.dy["Is1_STI"] = cm.dy["Is1_STI"] - mu * y["Is1_STI"] 
+    cm.dy["T1_STI"] = cm.dy["T1_STI"] - mu * y["T1_STI"]
     # Vital dynamics (New addition/removal to/from risk group)
-    dy["S2_STI"] = dy["S2_STI"] - args["mu"] * y["S2_STI"] + args["mu"] * args["N0s"][1]
-    dy["Ia2_STI"] = dy["Ia2_STI"] - args["mu"] * y["Ia2_STI"]
-    dy["Is2_STI"] = dy["Is2_STI"] - args["mu"] * y["Is2_STI"]
-    dy["T2_STI"] = dy["T2_STI"] - args["mu"] * y["T2_STI"]
     cm.flow("S3_STI", "Ia3_STI", infect_ia3(y, args)) # Susceptible to asymptomatic
     cm.flow("S3_STI", "Is3_STI", infect_is3(y, args)) # Susceptible to symptomatic
     cm.flow("Ia3_STI", "S3_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia3_STI", "T3_STI", lambda_a(args)) # Asymptomatic to tested and treatment
+    cm.flow("Ia3_STI", "T3_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
     cm.flow("Is3_STI", "T3_STI", args["lambda_s"]) # Symptomatic to tested and treatment
     cm.flow("T3_STI", "S3_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
+    cm.dy["S2_STI"] = cm.dy["S2_STI"] - mu * y["S2_STI"] + mu * N0s[1]
+    cm.dy["Ia2_STI"] = cm.dy["Ia2_STI"] - mu * y["Ia2_STI"]
+    cm.dy["Is2_STI"] = cm.dy["Is2_STI"] - mu * y["Is2_STI"]
+    cm.dy["T2_STI"] = cm.dy["T2_STI"] - mu * y["T2_STI"]
     # Vital dynamics (New addition/removal to/from risk group)
-    dy["S3_STI"] = dy["S3_STI"] - args["mu"] * y["S3_STI"] + args["mu"] * args["N0s"][2]
-    dy["Ia3_STI"] = dy["Ia3_STI"] - args["mu"] * y["Ia3_STI"]
-    dy["Is3_STI"] = dy["Is3_STI"] - args["mu"] * y["Is3_STI"]
-    dy["T3_STI"] = dy["T3_STI"] - args["mu"] * y["T3_STI"]
     cm.flow("S4_STI", "Ia4_STI", infect_ia4(y, args)) # Susceptible to asymptomatic
     cm.flow("S4_STI", "Is4_STI", infect_is4(y, args)) # Susceptible to symptomatic
     cm.flow("Ia4_STI", "S4_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia4_STI", "T4_STI", lambda_a(args)) # Asymptomatic to tested and treatment
+    cm.flow("Ia4_STI", "T4_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
     cm.flow("Is4_STI", "T4_STI", args["lambda_s"]) # Symptomatic to tested and treatment
     cm.flow("T4_STI", "S4_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
+    cm.dy["S3_STI"] = cm.dy["S3_STI"] - mu * y["S3_STI"] + mu * N0s[2]
+    cm.dy["Ia3_STI"] = cm.dy["Ia3_STI"] - mu * y["Ia3_STI"]
+    cm.dy["Is3_STI"] = cm.dy["Is3_STI"] - mu * y["Is3_STI"]
+    cm.dy["T3_STI"] = cm.dy["T3_STI"] - mu * y["T3_STI"]
     # Vital dynamics (New addition/removal to/from risk group)
-    dy["S4_STI"] = dy["S4_STI"] - args["mu"] * y["S4_STI"] + args["mu"] * args["N0s"][3]
-    dy["Ia4_STI"] = dy["Ia4_STI"] - args["mu"] * y["Ia4_STI"]
-    dy["Is4_STI"] = dy["Is4_STI"] - args["mu"] * y["Is4_STI"]
-    dy["T4_STI"] = dy["T4_STI"] - args["mu"] * y["T4_STI"]
+    cm.dy["S4_STI"] = cm.dy["S4_STI"] - mu * y["S4_STI"] + mu * N0s[3]
+    cm.dy["Ia4_STI"] = cm.dy["Ia4_STI"] - mu * y["Ia4_STI"]
+    cm.dy["Is4_STI"] = cm.dy["Is4_STI"] - mu * y["Is4_STI"]
+    cm.dy["T4_STI"] = cm.dy["T4_STI"] - mu * y["T4_STI"]
 
     # Return the differential changes
     return cm.dy
 
 # Function to setup the model and return the integrator
-def setup_model(args, y0):
+def setup_model():
     """
     Set up the model for simulation.
 
@@ -646,7 +625,8 @@ def setup_model(args, y0):
     # Create an ODE integrator object using the icomo library
     integrator_object = icomo.ODEIntegrator(
         ts_out=ts,  # Output time points
-        t_0=min(ts),  # Initial time point
+        t_0=ts[0],  # Initial time point
+        t_1=ts[-1],  # Final time point
         ts_solver=ts,  # Time points for the solver to use
     )
 
