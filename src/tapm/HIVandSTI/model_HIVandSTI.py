@@ -157,6 +157,7 @@ y0 = {
     "A44": 0.05 * N04,
 
     "H": 0.2 * N0, # hazard
+    "H1": 0.2 * N01, # helper function
     
     # STI starting values
     "S1_STI": 0.85 * N01,
