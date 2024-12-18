@@ -12,10 +12,10 @@ logged_exp_logis = False
 
 
 # Parameters we have to decide
-PrEPuptake_rg1 = 0.1 # annual PrEP uptake in risk group 1 (fraction)
-PrEPuptake_rg2 = 0.1 # annual PrEP uptake in risk group 2 (fraction)
-PrEPuptake_rg3 = 0.1 # annual PrEP uptake in risk group 3 (fraction)
-PrEPuptake_rg4 = 0.1 # annual PrEP uptake in risk group 4 (fraction)
+PrEPuptake_rg1 = 0.5 # annual PrEP uptake in risk group 1 (fraction)
+PrEPuptake_rg2 = 0.5 # annual PrEP uptake in risk group 2 (fraction)
+PrEPuptake_rg3 = 0.5 # annual PrEP uptake in risk group 3 (fraction)
+PrEPuptake_rg4 = 0.5 # annual PrEP uptake in risk group 4 (fraction)
 
 
 # Parameters from GannaRozhnova's paper (Elimination prospects of the Dutch HIV epidemic among men who have sex with men in the era of pre-exposure prophylaxis)
@@ -156,8 +156,10 @@ y0 = {
     "A34": 0.01 * N03,
     "A44": 0.001 * N04,
 
-    "H": 0.2 * N0, # hazard
-    #"H1": 0.2 * N01, # helper function
+    "H": [[0.0001 * N01,0.001 * N02,0.001 * N03,0.01 * N04,0.001 * N01,0.01 * N02,0.1 * N03,0.1 * N04,0.0001 * N01,0.001 * N02,0.01 * N03,0.01 * N04,0.0001 * N01,0.001 * N02,0.01 * N03,0.001 * N04],
+        [0.0001 * N01,0.001 * N02,0.001 * N03,0.01 * N04,0.001 * N01,0.01 * N02,0.1 * N03,0.1 * N04,0.0001 * N01,0.001 * N02,0.01 * N03,0.01 * N04,0.0001 * N01,0.001 * N02,0.01 * N03,0.001 * N04]], # hazard
+    # maybe this needs three compartments instead of two
+    # also not sure about the initial values
     
     # STI starting values
     "S1_STI": 0.85 * N01,
@@ -243,7 +245,7 @@ def m(args, H):
         "Calculating self-regulation factor factor 'm' using exponential function"
     )
     if H is None:
-        H = args["H"]
+        H = jnp.sum(args["H"][-1]) # sum over all hazard compartments (hazard is only last compartment of H)
     min_exp = args["min_exp"]
     max_exp = args["max_exp"]
     tau_exp = args["tau_exp"] * args["scaling_factor_m_eps"]
@@ -554,7 +556,7 @@ def main_model(t, y, args):
 
     # hazard--------------------------------------------------------------------------------------------------------------------------------------------------------
     #TODO i have no idea how to implement this
-    cm.flow("H", "S1", 0)
+    cm.delayed_copy([y["A11"],y["A12"],y["A13"],y["A14"],y["A21"],y["A22"],y["A23"],y["A24"],y["A31"],y["A32"],y["A33"],y["A34"],y["A41"],y["A42"],y["A43"],y["A44"]],y["H"],jnp.ones(16)*tau)
 
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
     # Basic STI dynamics
