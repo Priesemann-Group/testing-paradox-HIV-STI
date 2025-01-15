@@ -156,8 +156,7 @@ y0 = {
     "A34": 0.01 * N03,
     "A44": 0.001 * N04,
 
-    "H": jnp.array([[0.0001 * N01, 0.001 * N02, 0.001 * N03, 0.01 * N04, 0.001 * N01, 0.01 * N02, 0.1 * N03, 0.1 * N04, 0.0001 * N01, 0.001 * N02, 0.01 * N03, 0.01 * N04, 0.0001 * N01, 0.001 * N02, 0.01 * N03, 0.001 * N04],
-        [0.0001 * N01, 0.001 * N02, 0.001 * N03, 0.01 * N04, 0.001 * N01, 0.01 * N02, 0.1 * N03, 0.1 * N04, 0.0001 * N01, 0.001 * N02, 0.01 * N03, 0.01 * N04, 0.0001 * N01, 0.001 * N02, 0.01 * N03, 0.001 * N04]]), # hazard
+    "H": jnp.array([0,0]), # hazard
     # maybe this needs three compartments instead of two
     # also not sure about the initial values
     
@@ -244,8 +243,7 @@ def m(args, H):
     logger.debug(
         "Calculating self-regulation factor factor 'm' using exponential function"
     )
-    if H is None:
-        H = jnp.sum(args["H"][-1]) # sum over all hazard compartments (hazard is only last compartment of H)
+    H = H[-1] # (hazard is only last compartment of H)
     min_exp = args["min_exp"]
     max_exp = args["max_exp"]
     tau_exp = args["tau_exp"] * args["scaling_factor_m_eps"]
@@ -555,10 +553,9 @@ def main_model(t, y, args):
     cm.dy["A44"] = cm.dy["A44"] - (mu + gammas[3])*y["A44"] + gammas[2]*y["A43"]
 
     # hazard--------------------------------------------------------------------------------------------------------------------------------------------------------
-    #cm.delayed_copy([y["A11"],y["A12"],y["A13"],y["A14"],y["A21"],y["A22"],y["A23"],y["A24"],y["A31"],y["A32"],y["A33"],y["A34"],y["A41"],y["A42"],y["A43"],y["A44"]],y["H"],jnp.ones(16)*tau)
-    #cm.delayed_copy(["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"],"H",jnp.ones(16)*tau)
+    
     for start_comp in ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]:
-        cm.delayed_copy(start_comp,"H",tau)
+        cm.delayed_copy(start_comp,"H",jnp.array([tau,tau]))
     #cm.delayed_copy(["A11","A12",y["A13"],y["A14"],y["A21"],y["A22"],y["A23"],y["A24"],y["A31"],y["A32"],y["A33"],y["A34"],y["A41"],y["A42"],y["A43"],y["A44"]],y["H"],jnp.ones(16)*tau)
 
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
