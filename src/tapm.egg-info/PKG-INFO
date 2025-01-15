@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: tapm
-Version: 0.1.dev29+ge828566.d20240813
+Version: 0.1.dev78+g3b0121e.d20250115
 Summary: Testing artefacts in pharmaceutically-controlled multi-pathogen systems: a modelling study.
 Author: Priesemann Group
 Classifier: License :: OSI Approved :: MIT License
@@ -27,7 +27,7 @@ Requires-Dist: scikit-learn
 Requires-Dist: mplcursors
 Requires-Dist: jax
 Requires-Dist: diffrax
-Requires-Dist: icomo
+Requires-Dist: icomo>=1.0.1
 Requires-Dist: pytest
 Provides-Extra: dev
 Requires-Dist: numpy; extra == "dev"

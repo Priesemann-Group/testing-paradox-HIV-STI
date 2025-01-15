@@ -10,7 +10,7 @@ scikit-learn
 mplcursors
 jax
 diffrax
-icomo
+icomo>=1.0.1
 pytest
 
 [dev]
