@@ -10,7 +10,7 @@ args = {
     "gammaT_STI": 1.0 / 7.0,  # Recovery rate from treated STI per day [Checked, try with 1/7]
     "lambda_0": 0.0,  # Baseline test rate for asymptomatic STI [Checked]
     "lambda_s": 1 / 14.0,  # Baseline test rate for symptomatic STI [Checked]
-    "lambda_P": 2 / 360,  # Infection rate due to HIV prevalence [Checked]
+    "lambda_P": 1 / 360,  # Infection rate due to HIV prevalence [Checked]
     "asymptomatic": 0.85,  # Proportion of asymptomatic infections [Checked]
     "m_max": 0.8,  # Maximum modulating factor
     "H_thres": 0.1,  # HIV threshold

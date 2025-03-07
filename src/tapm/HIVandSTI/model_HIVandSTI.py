@@ -86,6 +86,7 @@ min_exp = 0.0  # Minimum value for the exponential modulating factor
 max_exp = 1.0  # Maximum value for the exponential modulating factor
 tau_exp = 0.2  # Time constant for the exponential modulating factor
 Sigma = 0.01/365 # Influx
+delay = 200 # Delay for the Hazard
 ##---------------------------------------------
 
 # Initial state of the compartments
@@ -156,7 +157,7 @@ y0 = {
     "A34": 0.01 * N03,
     "A44": 0.001 * N04,
 
-    "H": jnp.array([0,0]), # hazard
+    "H": jnp.array([0.0, 0.0]), # hazard
     # maybe this needs three compartments instead of two
     # also not sure about the initial values
     
@@ -180,7 +181,7 @@ y0 = {
 }
 
 
-args = dict(N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, beta_HIV=beta_HIV, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, P_HIV=P_HIV, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact)
+args = dict(N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, beta_HIV=beta_HIV, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, P_HIV=P_HIV, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact, delay=delay)
 
 #checked
 def calculate_N(y): # number of people per risk group for a given state y (which means at a given time) for HIV
@@ -226,6 +227,7 @@ logger = logging.getLogger(__name__)
 
 # Global flag to track logging
 logged_exp_logis = False
+logged_tau = False
 
 
 def m(args, H):
@@ -240,10 +242,8 @@ def m(args, H):
     float: The output of the exponential function.
     """
     global logged_exp_logis
-    logger.debug(
-        "Calculating self-regulation factor factor 'm' using exponential function"
-    )
-    H = H[-1] # (hazard is only last compartment of H)
+    logger.debug("Calculating self-regulation factor factor 'm' using exponential function")
+    H = jnp.array(H[-1]) # (hazard is only last compartment of H)
     min_exp = args["min_exp"]
     max_exp = args["max_exp"]
     tau_exp = args["tau_exp"] * args["scaling_factor_m_eps"]
@@ -357,7 +357,7 @@ def lambda_a(y,args):
         + contact
         * (1 - m(args, H=y["H"]))
         * args["beta_HIV"]
-        * y["H"]
+        * jnp.array(y["H"][-1]) # (hazard is only last compartment of H)
         * (1 - args["P_HIV"])  # HIV dependent term
         + args["lambda_P"]
         * args["P_HIV"]  # Proportional infection rate due to HIV prevalence
@@ -370,7 +370,7 @@ def infect_ia1(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J1(y, args)
     )
 
@@ -380,7 +380,7 @@ def infect_is1(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J1(y, args)
     )
 
@@ -389,7 +389,7 @@ def infect_ia2(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J2(y, args)
     )
 
@@ -398,7 +398,7 @@ def infect_is2(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J2(y, args)
     )
 
@@ -407,7 +407,7 @@ def infect_ia3(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J3(y, args)
     )
 
@@ -415,7 +415,7 @@ def infect_is3(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J3(y, args)
     )
 
@@ -423,7 +423,7 @@ def infect_ia4(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J4(y, args)
     )
 
@@ -431,14 +431,14 @@ def infect_is4(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
         asymptomatic
-        * (1 - m(args, H=y["H"]) * (1 - args["P_HIV"]))
+        * (1 - m(args, H=jnp.array(y["H"])) * (1 - args["P_HIV"]))
         * J4(y, args)
     )
 
 def main_model(t, y, args):
     cm = icomo.CompModel(y)  # Initialize the compartmental model
     # unpack args
-    Kons, N0s, mu, Omega, Koffs, tau, rhos, tauPs, Phi, gammas = args['Kons'], args['N0s'], args['mu'], args['Omega'], args['Koffs'], args['tau'], args['rhos'], args['tauPs'], args['Phi'], args['gammas']
+    Kons, N0s, mu, Omega, Koffs, tau, rhos, tauPs, Phi, gammas, delay = args['Kons'], args['N0s'], args['mu'], args['Omega'], args['Koffs'], args['tau'], args['rhos'], args['tauPs'], args['Phi'], args['gammas'], args['delay']
     
     # HIV dynamics-------------------------------------------------------------------------------------------------------------------------------
     # HIV dynamics double checked, not the functions that are called though, just the terms
@@ -553,10 +553,16 @@ def main_model(t, y, args):
     cm.dy["A44"] = cm.dy["A44"] - (mu + gammas[3])*y["A44"] + gammas[2]*y["A43"]
 
     # hazard--------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-    for start_comp in ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]:
-        cm.delayed_copy(start_comp,"H",jnp.array([tau,tau]))
-    #cm.delayed_copy(["A11","A12",y["A13"],y["A14"],y["A21"],y["A22"],y["A23"],y["A24"],y["A31"],y["A32"],y["A33"],y["A34"],y["A41"],y["A42"],y["A43"],y["A44"]],y["H"],jnp.ones(16)*tau)
+    compartments = ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]
+    #tau_delay = jnp.array([tau for _ in compartments]) # Create an array of delays with the same length as compartments
+
+    for start_comp in compartments:
+        # # y[start_comp] = jnp.array(y[start_comp])
+        # if not isinstance(y[start_comp], jnp.ndarray):
+        #     raise ValueError(f"{start_comp} must be an array-like object")
+        cm.delayed_copy(start_comp,"H", delay)
+    # temp = ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]
+    # cm.delayed_copy(temp,"H", jnp.array([tau, tau]))
 
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
     # Basic STI dynamics

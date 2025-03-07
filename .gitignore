@@ -28,6 +28,10 @@ MANIFEST
 
 # Ignore the following directories
 figures/
+results/
+
+# Ignore the following file types (.mp4)
+*.mp4
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
