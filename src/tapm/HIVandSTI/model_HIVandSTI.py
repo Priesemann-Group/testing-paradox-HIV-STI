@@ -55,7 +55,7 @@ Kon2 = -jnp.log(1-PrEPuptake_rg2) / 360.0 # annual PrEP uptake rate in risk grou
 Kon3 = -jnp.log(1-PrEPuptake_rg3) / 360.0 # annual PrEP uptake rate in risk group 3
 Kon4 = -jnp.log(1-PrEPuptake_rg4) / 360.0 # annual PrEP uptake rate in risk group 4
 Kons = [Kon1,Kon2,Kon3,Kon4]
-Koff1 = 1/5.0 / 360.0 # per year, average duration of taing PrEP in risk group 1
+Koff1 = 1/5.0 / 360.0 # per year, average duration of taking PrEP in risk group 1
 Koff2 = Koff1 
 Koff3 = Koff1 
 Koff4 = Koff1 
@@ -64,7 +64,7 @@ Koffs = [Koff1,Koff2,Koff3,Koff4]
 
 ##---------------------------------------------
 m_function = "exponential",  # Modulating function
-#beta_HIV = 0.6341 / 360.0 # HIV infection rate per day
+beta_HIV = 0.6341 / 360.0 # HIV infection rate per day
 beta_STI = 0.0016 * 7.0  # STI infection rate [Checked]
 #mu = 1.0 / 45.0 / 360.0,  # Natural death rate per day [Checked]
 gamma_STI = 1.0 / 1.32 / 360.0  # Recovery rate from asymptomatic STI per day [Checked]
@@ -181,7 +181,7 @@ y0 = {
 }
 
 
-args = dict(N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact, delay=delay)
+args = dict(beta_HIV=beta_HIV, N0s=N0s, mu=mu, Omega=Omega, c=c, h=h, epsilon=epsilon, epsilonP=epsilonP, Lambda=Lambda, omega=omega, Phi=Phi, tau = tau, tauPs=tauPs, rhos=rhos, gammas=gammas, Kons=Kons, Koffs=Koffs, asymptomatic=asymptomatic, beta_STI=beta_STI, lambda_0=lambda_0, lambda_P=lambda_P, lambda_s=lambda_s, m_function=m_function, min_exp=min_exp, max_exp=max_exp, tau_exp=tau_exp, m_eps=m_eps, Sigma=Sigma, scaling_factor_m_eps=scaling_factor_m_eps, gamma_STI=gamma_STI, gammaT_STI=gammaT_STI, contact=contact, delay=delay)
 
 #checked
 def calculate_N(y): # number of people per risk group for a given state y (which means at a given time) for HIV
@@ -358,20 +358,17 @@ def calculate_N_Prep(y):
     
 # Function to calculate the testing rate of STI
 def lambda_a(y,args):
-    contact = jnp.array(args["contact"])
     compartments = ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]
     compartment_values = jnp.array([y[key] for key in compartments])
     hazard = jnp.sum(compartment_values) / jnp.sum(calculate_N(y))
     return (
-        args["lambda_0"]  # Baseline test rate
-        + contact
-        * (1 - m(args, y))
-        * args["beta_HIV"]
-        * hazard # (hazard is only last compartment of H)
-        * (1 - calculate_N_Prep(y))  # HIV dependent term
-        + args["lambda_P"]
-        * calculate_N_Prep(y)  # Proportional infection rate due to HIV prevalence
+        
+        args["contact"] * (1 - m(args, y)) * args["beta_HIV"] * hazard * (1 - calculate_N_Prep(y))  # HIV dependent term
+        + args["lambda_P"] * calculate_N_Prep(y)  # Proportional infection rate due to HIV prevalence
     )
+
+def lambda_s(y,args):
+    return args["lambda_0"] + lambda_a(y,args)
 
 
 # Function to calculate infection from asymptomatic STI individuals
@@ -389,7 +386,7 @@ def infect_is1(y, args):
     logger.debug("Calculating infection from symptomatic STI individuals")
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
-        asymptomatic
+        (1-asymptomatic)
         * (1 - m(args, y) * (1 - calculate_N_Prep(y)))
         * J1(y, args)
     )
@@ -407,7 +404,7 @@ def infect_is2(y, args):
     logger.debug("Calculating infection from symptomatic STI individuals")
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
-        asymptomatic
+        (1-asymptomatic)
         * (1 - m(args, y) * (1 - calculate_N_Prep(y)))
         * J2(y, args)
     )
@@ -424,7 +421,7 @@ def infect_ia3(y, args):
 def infect_is3(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
-        asymptomatic
+        (1-asymptomatic)
         * (1 - m(args, y) * (1 - calculate_N_Prep(y)))
         * J3(y, args)
     )
@@ -440,7 +437,7 @@ def infect_ia4(y, args):
 def infect_is4(y, args):
     asymptomatic = jnp.array(args["asymptomatic"])
     return (
-        asymptomatic
+        (1-asymptomatic)
         * (1 - m(args, y) * (1 - calculate_N_Prep(y)))
         * J4(y, args)
     )
@@ -580,14 +577,14 @@ def main_model(t, y, args):
     cm.flow("S1_STI", "Is1_STI", infect_is1(y, args)) # Susceptible to symptomatic
     cm.flow("Ia1_STI", "S1_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
     cm.flow("Ia1_STI", "T1_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
-    cm.flow("Is1_STI", "T1_STI", args["lambda_s"]) # Symptomatic to tested and treatment
+    cm.flow("Is1_STI", "T1_STI", lambda_s(y,args)) # Symptomatic to tested and treatment
     cm.flow("T1_STI", "S1_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
     # Vital dynamics (New addition/removoval to/from risk group)
     cm.flow("S2_STI", "Ia2_STI", infect_ia2(y, args)) # Susceptible to asymptomatic
     cm.flow("S2_STI", "Is2_STI", infect_is2(y, args)) # Susceptible to symptomatic
     cm.flow("Ia2_STI", "S2_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
     cm.flow("Ia2_STI", "T2_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
-    cm.flow("Is2_STI", "T2_STI", args["lambda_s"]) # Symptomatic to tested and treatment
+    cm.flow("Is2_STI", "T2_STI", lambda_s(y,args)) # Symptomatic to tested and treatment
     cm.flow("T2_STI", "S2_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
     cm.dy["S1_STI"] = cm.dy["S1_STI"] - mu * y["S1_STI"] + mu * N0s[0]
     cm.dy["Ia1_STI"] = cm.dy["Ia1_STI"] - mu * y["Ia1_STI"]
@@ -598,7 +595,7 @@ def main_model(t, y, args):
     cm.flow("S3_STI", "Is3_STI", infect_is3(y, args)) # Susceptible to symptomatic
     cm.flow("Ia3_STI", "S3_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
     cm.flow("Ia3_STI", "T3_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
-    cm.flow("Is3_STI", "T3_STI", args["lambda_s"]) # Symptomatic to tested and treatment
+    cm.flow("Is3_STI", "T3_STI", lambda_s(y,args)) # Symptomatic to tested and treatment
     cm.flow("T3_STI", "S3_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
     cm.dy["S2_STI"] = cm.dy["S2_STI"] - mu * y["S2_STI"] + mu * N0s[1]
     cm.dy["Ia2_STI"] = cm.dy["Ia2_STI"] - mu * y["Ia2_STI"]
@@ -609,7 +606,7 @@ def main_model(t, y, args):
     cm.flow("S4_STI", "Is4_STI", infect_is4(y, args)) # Susceptible to symptomatic
     cm.flow("Ia4_STI", "S4_STI", args["gamma_STI"]) # Asymptomatic to susceptible (recovery)
     cm.flow("Ia4_STI", "T4_STI", lambda_a(y,args)) # Asymptomatic to tested and treatment
-    cm.flow("Is4_STI", "T4_STI", args["lambda_s"]) # Symptomatic to tested and treatment
+    cm.flow("Is4_STI", "T4_STI", lambda_s(y,args)) # Symptomatic to tested and treatment
     cm.flow("T4_STI", "S4_STI", args["gammaT_STI"]) # Treatment to susceptible (immunity loss)
     cm.dy["S3_STI"] = cm.dy["S3_STI"] - mu * y["S3_STI"] + mu * N0s[2]
     cm.dy["Ia3_STI"] = cm.dy["Ia3_STI"] - mu * y["Ia3_STI"]
