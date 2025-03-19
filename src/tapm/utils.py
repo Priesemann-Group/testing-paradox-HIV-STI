@@ -21,6 +21,8 @@ def save_results(results, filename):
 
 
 # Define a function to read and evaluate the file
+# PD: using np and jnp in calculation of args in HIVandSTI.py (in fraction2rate() etc.)
+#     this breaks this usage of exec with empty namespace
 def read_params(filename):
     with open(filename, 'r') as file:
         content = file.read()
