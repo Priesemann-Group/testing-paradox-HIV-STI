@@ -19,6 +19,8 @@ notebooks/bigHIVmodel.ipynb
 notebooks/implicitanother.py
 notebooks/implicitnotsolved.py
 notebooks/lambdaP_vs_P.ipynb
+notebooks/min_PrEP_VS_lambda_P copy.ipynb
+notebooks/min_PrEP_VS_lambda_P.ipynb
 notebooks/miscellanea_for_fig_1.py
 notebooks/model_params.txt
 notebooks/model_params_HIVandSTI.txt
@@ -27,6 +29,7 @@ notebooks/model_sweep_P_H_lambda.ipynb
 notebooks/modified_STI_model_sweep.ipynb
 notebooks/modified_STI_model_sweep_all.ipynb
 notebooks/notebook_for_final_fig.ipynb
+notebooks/numerical_solution.ipynb
 notebooks/temp1.ipynb
 notebooks/temp2.ipynb
 notebooks/temp3.ipynb
@@ -59,6 +62,7 @@ results/test.npy
 src/tapm/__init__.py
 src/tapm/_version.py
 src/tapm/calculate_y0.py
+src/tapm/miscellanea.py
 src/tapm/utils.py
 src/tapm.egg-info/PKG-INFO
 src/tapm.egg-info/SOURCES.txt

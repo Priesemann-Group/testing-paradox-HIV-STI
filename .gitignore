@@ -7,6 +7,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+__pycache__/
 .Python
 build/
 develop-eggs/
@@ -29,6 +30,7 @@ MANIFEST
 # Ignore the following directories
 figures/
 results/
+src/tapm.egg-info/
 
 # Ignore the following file types (.mp4)
 *.mp4

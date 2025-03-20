@@ -1,4 +1,5 @@
-# Parameters from GannaRozhnova's paper (Elimination prospects of the Dutch HIV epidemic among men who have sex with men in the era of pre-exposure prophylaxis)
+# Parameters from GannaRozhnova's paper (Elimination prospects of the Dutch HIV epidemic among men who have sex with men in the era of
+#  pre-exposure prophylaxis)  https://pubmed.ncbi.nlm.nih.gov/30379687/
 
 
 
@@ -44,26 +45,53 @@ y0 = {
     "Is_STI": 0.15 * N_0,    # Infected symptomatic
     "T_STI":  0.05 * N_0,    # Tested and treated
 
-    #"H": jnp.array([0.0, 0.0]), # hazard
+    # Hazard
+    "H": [0.0, 0.0, 0.0, 0.0] * N_0, # hazard
     # maybe this needs three compartments instead of two
     # also not sure about the initial values
 }
-if not all(np.isclose(np.array([x for x in y0.values()]).sum(axis=0), 2*N_0)):
-    logger.error("y_0 does not add up to N_0.")
+# if not all(np.isclose(np.array([x for x in y0.values()]).sum(axis=0), 2*N_0)):
+#     logger.error("y_0 does not add up to N_0.")
 
 
 
 # TODO: check if the interpretation as fraction/duration 2 rate is correct
 
 def fraction2rate(x):
+    """
+    Converts a fraction to a daily rate.
+
+    This function takes a fraction (or scalar) `x` and converts it into a daily rate
+    using the formula `-log(1-x) / 365`. If the input `x` is a scalar, it is expanded
+    into a 1D array with four identical elements before the conversion.
+
+    Parameters:
+    x (float or array-like): The fraction(s) to be converted.
+
+    Returns:
+    jnp.ndarray: A 1D array of daily rates corresponding to the input fraction(s).
+    """
     if np.isscalar(x):
         x = jnp.array([x]*4)
-    return -jnp.log(1-x) / 360.
+    return -jnp.log(1-x) / 365.
 
 def duration2rate(x):
+    """
+    Converts a duration (in days) to a rate per day.
+
+    If the input is a scalar, it is converted to a 1D array with four identical elements.
+    The rate is calculated as the reciprocal of the duration (1 / x) divided by 365,
+    effectively converting the duration to a daily rate.
+
+    Parameters:
+    x (float or array-like): The duration(s) in days.
+
+    Returns:
+    jnp.ndarray: An array of daily rates corresponding to the input durations.
+    """
     if np.isscalar(x):
         x = jnp.array([x]*4)
-    return 1 / x / 360.
+    return 1 / x / 365.
 
 
 # Parameters we have to decide
@@ -72,7 +100,7 @@ k_off = duration2rate(5.0)        # average duration of taking PrEP per year
 
 tau_p = fraction2rate(0.95)     # annual ART uptake rate
 
-c = jnp.array([0.13, 1.43, 5.44, 18.21]) / 360.0 # per year, average number of partners in risk group l
+c = jnp.array([0.13, 1.43, 5.44, 18.21]) / 365.0 # per year, average number of partners in risk group l
 h = jnp.array([0.62, 0.12, 0.642, 0.0])         # infectivity of untreated individuals in stage k of infection
 
 phis = fraction2rate(0.05)  # per year, annual ART dropout rate
@@ -83,7 +111,7 @@ rhos = duration2rate ( jnp.array([0.142, 8.439, 1.184, 1.316]) )   # per year, r
 
 
 
-mu = 1/45 /360.0 # per year, rate of recruitment to sexually active population
+mu = 1/45 /365.0 # per year, rate of recruitment to sexually active population
 Omega = 1-0.86 # PrEP effectiveness, baseline
 epsilon = 0.01 # infectivity of treated individuals
 epsilonP = h[0]/2 # infectivity of MSM infected on PrEP
@@ -95,13 +123,13 @@ omega = 0.5 # mixing parameter, (0: assortative, 1: proportionate mixing)
 
 ##---------------------------------------------
 m_function = "exponential",  # Modulating function
-beta_HIV = 0.6341 / 360.0 # HIV infection rate per day
+beta_HIV = 0.6341 / 365.0 # HIV infection rate per day
 beta_STI = 0.0016 * 7.0  # STI infection rate [Checked]
-#mu = 1.0 / 45.0 / 360.0,  # Natural death rate per day [Checked]
-gamma_STI = 1.0 / 1.32 / 360.0  # Recovery rate from asymptomatic STI per day [Checked]
+#mu = 1.0 / 45.0 / 365.0,  # Natural death rate per day [Checked]
+gamma_STI = 1.0 / 1.32 / 365.0  # Recovery rate from asymptomatic STI per day [Checked]
 gammaT_STI = 1.0 / 7.0  # Recovery rate from treated STI per day [Checked, try with 1/7]
 lambda_0 = 1 / 14.0  # Baseline test rate for symptomatic STI [Checked]
-lambda_P = 2 / 360  # Testing rate due to HIV prevalence [Checked]
+lambda_P = 2 / 365  # Testing rate due to HIV prevalence [Checked]
 asymptomatic = 0.85  # Proportion of asymptomatic infections [Checked]
 m_max = 0.8  # Maximum modulating factor
 H_thres = 0.1  # HIV threshold
@@ -116,7 +144,7 @@ min_exp = 0.0  # Minimum value for the exponential modulating factor
 max_exp = 1.0  # Maximum value for the exponential modulating factor
 tau_exp = 0.2  # Time constant for the exponential modulating factor
 Sigma = 0.01/365 # Influx
-delay = 200 # Delay for the Hazard
+delay = jnp.array([20.]) # Delay for the Hazard
 ##---------------------------------------------
 
 
@@ -181,24 +209,33 @@ def m(args, y):
     global logged_exp_logis
     logger.debug("Calculating self-regulation factor factor 'm' using exponential function")
     #H = jnp.array(H[-1]) # (hazard is only last compartment of H)
-    min_exp = args["min_exp"]
-    max_exp = args["max_exp"]
-    tau_exp = args["tau_exp"] * args["scaling_factor_m_eps"]
+    # min_exp = args["min_exp"]
+    # max_exp = args["max_exp"]
+    # tau_exp = args["tau_exp"] * args["scaling_factor_m_eps"]
 
     if not logged_exp_logis:
         logger.info("Using exponential function to calculate m")
         logger.info(
             "Parameters: min_exp = %s, max_exp = %s, tau_exp = %s",
-            min_exp,
-            max_exp,
-            tau_exp,
+            args["min_exp"],
+            args["max_exp"],
+            args["tau_exp"] * args["scaling_factor_m_eps"],
         )
         logged_exp_logis = True
 
-    return min_exp + (max_exp - min_exp) * (1 - jnp.exp(-hazard(y, args) / tau_exp))
+    return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-hazard(y, args) / (args["tau_exp"] * args["scaling_factor_m_eps"])))
 
 
 def foi_HIV(y, args):
+    """
+    Computes the force of infection for HIV.
+    Args:
+        y (dict): A dictionary containing the state variables.
+        args (dict): A dictionary containing the model parameters. Expected keys include:
+
+    Returns:
+        ndarray: The computed force of infection as a vector.
+    """
 
     I_eff = args["epsilonP"]*y["IP"] \
           + jnp.dot(args["h"], jnp.array([y["I1"], y["I2"], y["I3"], y["I4"]])) \
@@ -210,14 +247,19 @@ def foi_HIV(y, args):
 
 def foi_STI(y, args):
     """
-    Calculates the force of infection of STI.
+    Calculates the force of infection for STIs.
+
+    Args:
+        y (dict): A dictionary containing the state variables of the model. 
+        args (Any): Additional parameters required for the calculation, 
 
     Returns:
-        1x4
+        ndarray: A 1x4 array representing the force of infection for each group.
     """
+
     I_eff = y["Ia_STI"] + y["Is_STI"]
     foi = (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(args) @ I_eff
-
+    
     return foi
 
 
@@ -238,7 +280,7 @@ def hazard(y, args):
     Returns:
         Value as float64.
     """
-    return 0.02    # debuging, remove later [TODO]
+    #return 0.02    # debuging, remove later [TODO]
     return jnp.sum( jnp.array([y["A1"], y["A2"], y["A3"], y["A4"]]) )
 
 def prep_fraction(y):
@@ -248,7 +290,7 @@ def prep_fraction(y):
     Returns:
         Value as float64.
     """
-    return 0.2    # debuging, remove later [TODO]
+    #return 0.2    # debuging, remove later [TODO]
     return jnp.sum( jnp.array([y["SP"], y["IP"]]) )
 
 def lambda_a(y, args):
@@ -308,7 +350,7 @@ def main_model(t, y, args):
 
     # Vital dynamics-----------------------------------------------------------------------------------------------------------------------------------------------
     for comp in cm.dy.keys():
-        if comp != "D":
+        if comp not in ["D", "H"]:
             cm.dy[comp] -= mu * y[comp]
     for comp in ["S", "S_STI"]:
         cm.dy[comp] += mu*args["N_0"]
@@ -316,16 +358,22 @@ def main_model(t, y, args):
 
     ### not used right now:
     # hazard--------------------------------------------------------------------------------------------------------------------------------------------------------
-    #compartments = ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]
-    #tau_delay = jnp.array([tau for _ in compartments]) # Create an array of delays with the same length as compartments
+    # def hazard_flow(start_comp, end_comp, rate):
+    #     for i in range(len(start_comp)):
+    #         cm.delayed_copy(start_comp[i], end_comp[i], rate[i])
+    # compartments = ["A1", "A2", "A3", "A4"]
 
-    #for start_comp in compartments:
-        # # y[start_comp] = jnp.array(y[start_comp])
-        # if not isinstance(y[start_comp], jnp.ndarray):
-        #     raise ValueError(f"{start_comp} must be an array-like object")
-        #cm.delayed_copy(start_comp,"H", delay)
-    # temp = ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]
-    # cm.delayed_copy(temp,"H", jnp.array([tau, tau]))
+    # hazard_flow(compartments, "H", args["delay"])
+    # #tau_delay = jnp.array([tau for _ in compartments]) # Create an array of delays with the same length as compartments
+
+    # for i in range(len(compartments)):
+    #     # # y[start_comp] = jnp.array(y[start_comp])
+    #     # if not isinstance(y[start_comp], jnp.ndarray):
+    #     #     raise ValueError(f"{start_comp} must be an array-like object")
+    #     cm.delayed_copy(comp_to_copy=compartments[i], delayed_comp="H", tau_delay=delay)
+    # # temp = ["A11","A12","A13","A14","A21","A22","A23","A24","A31","A32","A33","A34","A41","A42","A43","A44"]
+    # # cm.delayed_copy(temp,"H", jnp.array([tau, tau]))
+    # #cm.view_graph()
 
     return cm.dy
 
