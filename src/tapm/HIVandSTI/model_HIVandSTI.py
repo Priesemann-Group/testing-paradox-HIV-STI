@@ -2,8 +2,6 @@
 #  pre-exposure prophylaxis)  https://pubmed.ncbi.nlm.nih.gov/30379687/
 
 
-
-
 import numpy as np 
 import icomo
 import jax.numpy as jnp
@@ -12,12 +10,11 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 # Global flag to track logging
 logged_exp_logis = False
 
 
-
+# Starting values ----------------------------------------------------------------------------
 # Total population stratified by 4 risk groups
 N_0 = np.array([0.451, 0.353, 0.125, 0.071])
 if (N_0.sum() != 1):
@@ -38,23 +35,25 @@ y0 = {
     "A3": [0.0001,  0.001,  0.01,    0.01]    * N_0,    # Infected in stage 3 on ART
     "A4": [0.0001,  0.001,  0.01,    0.001]   * N_0,    # Infected in stage 4 on ART
     "D":  [0.0,     0.0,    0.0,     0.0]     * N_0,    # Deceased from HIV
+    # TODO: check if all columns add up to 1
     
     # STI starting values
     "S_STI":  0.65 * N_0,    # Susceptible
     "Ia_STI": 0.15 * N_0,    # Infected asymptomatic
     "Is_STI": 0.15 * N_0,    # Infected symptomatic
     "T_STI":  0.05 * N_0,    # Tested and treated
+    # TODO: why are these the same for all risk groups but for HIV it differs?
 
     # Hazard
     "H": [0.0, 0.0, 0.0, 0.0] * N_0, # hazard
-    # maybe this needs three compartments instead of two
-    # also not sure about the initial values
+    # TODO: maybe kick out and just use A or I?
 }
-# if not all(np.isclose(np.array([x for x in y0.values()]).sum(axis=0), 2*N_0)):
-#     logger.error("y_0 does not add up to N_0.")
+# TODO: chekc if logger correct
+if not all(np.isclose(np.array([x for x in y0.values()]).sum(axis=0), 2*N_0)):
+    logger.error("y_0 does not add up to N_0.")
 
 
-
+# Helper functions ----------------------------------------------------------------------------
 # TODO: check if the interpretation as fraction/duration 2 rate is correct
 
 def fraction2rate(x):
@@ -93,24 +92,21 @@ def duration2rate(x):
         x = jnp.array([x]*4)
     return 1 / x / 365.
 
-
+# Parameters ------------------------------------------------------------------------------
+# TODO: compare all params with paper and check if they are correctly interpreted
+# HIV params---------------------------------------------
 # Parameters we have to decide
-k_on = fraction2rate(0.3)        # annual PrEP uptake rate
-k_off = duration2rate(5.0)        # average duration of taking PrEP per year
+k_on = fraction2rate(0.3)   # annual PrEP uptake rate
+k_off = duration2rate(5.0)  # average duration of taking PrEP per year
 
+# from GannaRozhnova paper (Elimination prospects of the Dutch HIV epidemic)
 tau_p = fraction2rate(0.95)     # annual ART uptake rate
-
 c = jnp.array([0.13, 1.43, 5.44, 18.21]) / 365.0 # per year, average number of partners in risk group l
-h = jnp.array([0.62, 0.12, 0.642, 0.0])         # infectivity of untreated individuals in stage k of infection
-
+h = jnp.array([0.62, 0.12, 0.642, 0.0]) # infectivity of untreated individuals in stage k of infection
 phis = fraction2rate(0.05)  # per year, annual ART dropout rate
 taus = fraction2rate(0.3)   # per year, annual ART uptake rate
-
 gammas = duration2rate( jnp.array([8.21, 54.0, 2.463, 2.737]) )    # per year, rate of transition from stage 1 to 2 for tretaed individuals
 rhos = duration2rate ( jnp.array([0.142, 8.439, 1.184, 1.316]) )   # per year, rate of transition from stage 1 to 2 for untreated individuals
-
-
-
 mu = 1/45 /365.0 # per year, rate of recruitment to sexually active population
 Omega = 1-0.86 # PrEP effectiveness, baseline
 epsilon = 0.01 # infectivity of treated individuals
@@ -120,31 +116,32 @@ omega = 0.5 # mixing parameter, (0: assortative, 1: proportionate mixing)
 
 
 
-
-##---------------------------------------------
-m_function = "exponential",  # Modulating function
+# TODO: also check if these are correct, and see if names are same as in paper (e.g. asymptomatic)
+# TODO chekc if we can use any of Philipps helper functions here
+# TODO delete all unused parameters
+#STI params---------------------------------------------
+m_function = "exponential",  # Modulating function # TODO if we only ever use this i would not put it as a parameter but just fix the m as exponential
 beta_HIV = 0.6341 / 365.0 # HIV infection rate per day
-beta_STI = 0.0016 * 7.0  # STI infection rate [Checked]
-#mu = 1.0 / 45.0 / 365.0,  # Natural death rate per day [Checked]
-gamma_STI = 1.0 / 1.32 / 365.0  # Recovery rate from asymptomatic STI per day [Checked]
+beta_STI = 0.0016 * 7.0  # STI infection rate 
+gamma_STI = 1.0 / 1.32 / 365.0  # Recovery rate from asymptomatic STI per day 
 gammaT_STI = 1.0 / 7.0  # Recovery rate from treated STI per day [Checked, try with 1/7]
-lambda_0 = 1 / 14.0  # Baseline test rate for symptomatic STI [Checked]
-lambda_P = 2 / 365  # Testing rate due to HIV prevalence [Checked]
-asymptomatic = 0.85  # Proportion of asymptomatic infections [Checked]
+lambda_0 = 1 / 14.0  # Baseline test rate for symptomatic STI 
+lambda_P = 2 / 365  # Testing rate due to HIV prevalence 
+asymptomatic = 0.85  # Proportion of asymptomatic infections 
 m_max = 0.8  # Maximum modulating factor
 H_thres = 0.1  # HIV threshold
 scaling_factor_m_eps = 1.0  # Scaling factor for the exponential modulating factor
 m_eps = 0.01  # Small constant for smoothing
-#Phi_r = 40.0  # Not used in the current model
-#H_tau = 20.0  # Not used in the current model
+#Phi_r = 40.0  # Not used in the current model # TODO what was this? why not used?
+#H_tau = 20.0  # Not used in the current model # TODO what was this? why not used?
 contact = 50.0  # Scaling factor for HIV interaction term
-#H = 0.1  # Initial HIV prevalence
-#P_HIV = 0.25  # Initial proportion of HIV positive individuals
 min_exp = 0.0  # Minimum value for the exponential modulating factor
 max_exp = 1.0  # Maximum value for the exponential modulating factor
 tau_exp = 0.2  # Time constant for the exponential modulating factor
 Sigma = 0.01/365 # Influx
 delay = jnp.array([20.]) # Delay for the Hazard
+# additional notes:
+# mu is the same as in HIV model
 ##---------------------------------------------
 
 
@@ -194,7 +191,7 @@ logger = logging.getLogger(__name__)
 logged_exp_logis = False
 logged_tau = False
 
-
+# TODO check if this is correct
 def m(args, y):
     """
     Exponential function with three parameters: minimum value, maximum value, and rate/tau.
@@ -208,10 +205,6 @@ def m(args, y):
     """
     global logged_exp_logis
     logger.debug("Calculating self-regulation factor factor 'm' using exponential function")
-    #H = jnp.array(H[-1]) # (hazard is only last compartment of H)
-    # min_exp = args["min_exp"]
-    # max_exp = args["max_exp"]
-    # tau_exp = args["tau_exp"] * args["scaling_factor_m_eps"]
 
     if not logged_exp_logis:
         logger.info("Using exponential function to calculate m")
@@ -225,7 +218,10 @@ def m(args, y):
 
     return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-hazard(y, args) / (args["tau_exp"] * args["scaling_factor_m_eps"])))
 
-
+# TODO check if this is correct
+# TODO is this equal to J^P in ganna's paper?
+# TODO this is the J^P_l matrix from the paper, right? If yes, we should write that as a comment
+# TODO this is the force of infection per year right, check if this works with our time step we use for integration or if we need some factor 365 or so
 def foi_HIV(y, args):
     """
     Computes the force of infection for HIV.
@@ -244,7 +240,7 @@ def foi_HIV(y, args):
 
     return foi
 
-
+# TODO check if this is correct
 def foi_STI(y, args):
     """
     Calculates the force of infection for STIs.
@@ -259,19 +255,25 @@ def foi_STI(y, args):
 
     I_eff = y["Ia_STI"] + y["Is_STI"]
     foi = (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(args) @ I_eff
+    # TODO: dont we also need to multiply with beta_STI here?
+    # TODO: do we need contact matrix here? (LM: I think yes, as it is the same as in HIV model because we have the different risk groups)
     
     return foi
 
 
+# TODO check if calculation is correct (LM: it is correct apart from the todos)
+# TODO: make sure it is correctly orientated
 
-def contact_matrix(args):           # first implementation, TODO: make sure it is correctly orientated
-
+def contact_matrix(args):           
+    # this is the matrix names M_ll' in the paper from GannaRozhnova
     mixing = args["omega"] * jnp.tile(args["c"]*args["N_0"], [4,1]) / jnp.dot(args["c"], args["N_0"])
+    # TODO I think the args["N0"] here are wrong, it should be the sum of the compartments in each risk group, right?
+    # TODO chekc if in the tile fct it should really be [4,1] and not [1,4]
     diagonal = (1-args["omega"])*jnp.identity(4)
 
     return mixing + diagonal
 
-
+# TODO discuss if we really only want A compartments or also others (LM: I think only A is best as these best reflect the known cases)
 def hazard(y, args):
     """
     Calculates the hazard from the HIV model used for risk-perception.
@@ -280,8 +282,8 @@ def hazard(y, args):
     Returns:
         Value as float64.
     """
-    #return 0.02    # debuging, remove later [TODO]
     return jnp.sum( jnp.array([y["A1"], y["A2"], y["A3"], y["A4"]]) )
+
 
 def prep_fraction(y):
     """
@@ -290,9 +292,10 @@ def prep_fraction(y):
     Returns:
         Value as float64.
     """
-    #return 0.2    # debuging, remove later [TODO]
     return jnp.sum( jnp.array([y["SP"], y["IP"]]) )
 
+# TODO check if this is correct
+# TODO how do we get beta_HIV from HIV model? WE should kick out args["beta_HIV"] and use the one from the HIV model
 def lambda_a(y, args):
     """
     Calculates STI testing rate for asymtomatic infected.
@@ -301,8 +304,11 @@ def lambda_a(y, args):
         Array of rates with dimension [1, risk groups].
     """
     risk_induced_testing = args["contact"] * (1 - m(args, y)) * args["beta_HIV"] * hazard(y, args) * (1 - prep_fraction(y))
+    # TODO do we need the args["contact"] here? or should we delet it altogteher and work with the contact_matrix?
+    # TODO related to the above todo: does the contact matrix also include beta_HIV?
     prep_induced_testing = args["lambda_P"] * prep_fraction(y)
     return risk_induced_testing + prep_induced_testing
+
 
 def lambda_s(y, args):
     """
@@ -314,32 +320,40 @@ def lambda_s(y, args):
     return args["lambda_0"] + lambda_a(y, args)
 
 
+
+# TODO check if this is correct. UPDATE: Everything checked and correct, but there is a TODO for the STI influx
 def main_model(t, y, args):
     cm = icomo.CompModel(y)  # Initialize the compartmental model
-    
-    # HIV dynamics-------------------------------------------------------------------------------------------------------------------------------
-    cm.flow("S", "I1", foi_HIV(y, args))                       # check later
-    cm.flow("SP", "IP", args["Omega"]*foi_HIV(y, args))        # probably a prefactor
-    cm.flow("IP", "A1", args["tau_p"])
-    cm.flow("S", "SP", args["k_on"])
-    cm.flow("SP", "S", args["k_off"])
 
-
+    # helper function to add flows if we have an array of start, end and rates
     def add_flows(starts, ends, rates):
         for i in range(len(starts)):
             cm.flow(starts[i], ends[i], rates[i])
 
+    # list of all compartments in one category
     Is = ["I1", "I2", "I3", "I4", "D"]
     As = ["A1", "A2", "A3", "A4", "D"]
 
+    
+    # HIV dynamics-------------------------------------------------------------------------------------------------------------------------------
+    cm.flow("S", "I1", foi_HIV(y, args))                       
+    cm.flow("SP", "IP", args["Omega"]*foi_HIV(y, args))        
+    cm.flow("IP", "A1", args["tau_p"])
+    cm.flow("S", "SP", args["k_on"])
+    cm.flow("SP", "S", args["k_off"])
+
     add_flows(Is[:-1], Is[1:], args["rhos"])
     add_flows(As[:-1], As[1:], args["gammas"])
-
+    
     add_flows(Is[:-1], As[:-1], args["taus"])
     add_flows(As[:-1], Is[:-1], args["phis"])
 
+    # TODO add hazard for HIV? discuss
+    # TODO add influx for HIV? discuss
+
 
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
+    # TODO: influx is missing! (everything else is fine)
     cm.flow("S_STI",  "Ia_STI", (args["asymptomatic"])   * foi_STI(y, args))     # Susceptible to asymptomatic
     cm.flow("S_STI",  "Is_STI", (1-args["asymptomatic"]) * foi_STI(y, args))     # Susceptible to symptomatic
     cm.flow("Ia_STI", "S_STI",  args["gamma_STI"])                               # Asymptomatic to susceptible (recovery)
@@ -349,13 +363,16 @@ def main_model(t, y, args):
 
 
     # Vital dynamics-----------------------------------------------------------------------------------------------------------------------------------------------
-    for comp in cm.dy.keys():
+    # both HIV and STI 
+    for comp in cm.dy.keys(): 
         if comp not in ["D", "H"]:
-            cm.dy[comp] -= mu * y[comp]
+            cm.dy[comp] -= mu * y[comp] # deaths
     for comp in ["S", "S_STI"]:
-        cm.dy[comp] += mu*args["N_0"]
+        # TODO: recruitment really at rate mu? In th eSTI it should be Phi, but that could be equal mu i think. Check this.
+        cm.dy[comp] += mu*args["N_0"] # recruitment ("births")
 
 
+    # TODO delete this later
     ### not used right now:
     # hazard--------------------------------------------------------------------------------------------------------------------------------------------------------
     # def hazard_flow(start_comp, end_comp, rate):
