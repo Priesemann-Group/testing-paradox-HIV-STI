@@ -23,38 +23,38 @@ if (N_0.sum() != 1):
 # Initial state of the compartments stratified by risk group
 y0 = {
     # HIV compartments
-    "S":  [0.49874, 0.4919, 0.42845, 0.42395] * N_0,    # Susceptible
-    "SP": [0.49874, 0.4919, 0.42845, 0.42395] * N_0,    # Susceptible on PrEP
-    "I1": [0.00001, 0.0001, 0.001,   0.001]   * N_0,    # Infected in stage 1
-    "IP": [0.00001, 0.0001, 0.0001,  0.0001]  * N_0,    # Infected in stage 1 on PrEP
-    "I2": [0.001,   0.001,  0.01,    0.01]    * N_0,    # Infected in stage 2
-    "I3": [0.0001,  0.001,  0.01,    0.01]    * N_0,    # Infected in stage 3
-    "I4": [0.0001,  0.001,  0.001,   0.01]    * N_0,    # Infected in stage 4
-    "A1": [0.0001,  0.001,  0.001,   0.01]    * N_0,    # Infected in stage 1 on ART
-    "A2": [0.001,   0.01,   0.1,     0.1]     * N_0,    # Infected in stage 2 on ART
-    "A3": [0.0001,  0.001,  0.01,    0.01]    * N_0,    # Infected in stage 3 on ART
-    "A4": [0.0001,  0.001,  0.01,    0.001]   * N_0,    # Infected in stage 4 on ART
-    "D":  [0.0,     0.0,    0.0,     0.0]     * N_0,    # Deceased from HIV
-    # TODO: check if all columns add up to 1
+    "S":  0.3785* N_0,    # Susceptible
+    "SP": 0.3785* N_0,    # Susceptible on PrEP
+    "I1": 0.001 * N_0,    # Infected in stage 1
+    "IP": 0.001 * N_0,    # Infected in stage 1 on PrEP
+    "I2": 0.01  * N_0,    # Infected in stage 2
+    "I3": 0.01  * N_0,    # Infected in stage 3
+    "I4": 0.001 * N_0,    # Infected in stage 4
+    "A1": 0.1   * N_0,    # Infected in stage 1 on ART
+    "A2": 0.1   * N_0,    # Infected in stage 2 on ART
+    "A3": 0.01  * N_0,    # Infected in stage 3 on ART
+    "A4": 0.01  * N_0,    # Infected in stage 4 on ART
+    "D":  0.0   * N_0,    # Deceased from HIV
     
     # STI starting values
     "S_STI":  0.65 * N_0,    # Susceptible
     "Ia_STI": 0.15 * N_0,    # Infected asymptomatic
     "Is_STI": 0.15 * N_0,    # Infected symptomatic
     "T_STI":  0.05 * N_0,    # Tested and treated
-    # TODO: why are these the same for all risk groups but for HIV it differs?
 
     # Hazard
     "H": [0.0, 0.0, 0.0, 0.0] * N_0, # hazard
     # TODO: maybe kick out and just use A or I?
 }
-# TODO: chekc if logger correct
-if not all(np.isclose(np.array([x for x in y0.values()]).sum(axis=0), 2*N_0)):
-    logger.error("y_0 does not add up to N_0.")
+all_HIV_compartments = ["S", "SP", "I1", "IP", "I2", "I3", "I4", "A1", "A2", "A3", "A4", "D"]
+all_STI_compartments = ["S_STI", "Ia_STI", "Is_STI", "T_STI"]
+if not np.isclose(np.sum(np.array([y0[comp] for comp in all_HIV_compartments])), 1):
+    logger.error("y_0 does not add up to 1 for HIV.")
+if not np.isclose(np.sum(np.array([y0[comp] for comp in all_STI_compartments])), 1):
+    logger.error("y_0 does not add up to 1 for STI.")
 
 
 # Helper functions ----------------------------------------------------------------------------
-# TODO: check if the interpretation as fraction/duration 2 rate is correct
 
 def fraction2rate(x):
     """
@@ -93,7 +93,7 @@ def duration2rate(x):
     return 1 / x / 365.
 
 # Parameters ------------------------------------------------------------------------------
-# TODO: compare all params with paper and check if they are correctly interpreted
+# TODO: compare all params with paper and check if they are correctly interpreted, especially if everything is divided by 365 where needed and if the fraction2rate etc is used correctly
 # HIV params---------------------------------------------
 # Parameters we have to decide
 k_on = fraction2rate(0.3)   # annual PrEP uptake rate
@@ -117,36 +117,26 @@ omega = 0.5 # mixing parameter, (0: assortative, 1: proportionate mixing)
 
 
 # TODO: also check if these are correct, and see if names are same as in paper (e.g. asymptomatic)
-# TODO chekc if we can use any of Philipps helper functions here
-# TODO delete all unused parameters
 #STI params---------------------------------------------
-m_function = "exponential",  # Modulating function # TODO if we only ever use this i would not put it as a parameter but just fix the m as exponential
-beta_HIV = 0.6341 / 365.0 # HIV infection rate per day
+m_function = "exponential",  # Modulating function 
 beta_STI = 0.0016 * 7.0  # STI infection rate 
-gamma_STI = 1.0 / 1.32 / 365.0  # Recovery rate from asymptomatic STI per day 
+gamma_STI = duration2rate(1.32)  # Recovery rate from asymptomatic STI per day 
 gammaT_STI = 1.0 / 7.0  # Recovery rate from treated STI per day [Checked, try with 1/7]
 lambda_0 = 1 / 14.0  # Baseline test rate for symptomatic STI 
 lambda_P = 2 / 365  # Testing rate due to HIV prevalence 
 asymptomatic = 0.85  # Proportion of asymptomatic infections 
 m_max = 0.8  # Maximum modulating factor
-H_thres = 0.1  # HIV threshold
-scaling_factor_m_eps = 1.0  # Scaling factor for the exponential modulating factor
-m_eps = 0.01  # Small constant for smoothing
-#Phi_r = 40.0  # Not used in the current model # TODO what was this? why not used?
-#H_tau = 20.0  # Not used in the current model # TODO what was this? why not used?
-contact = 50.0  # Scaling factor for HIV interaction term
 min_exp = 0.0  # Minimum value for the exponential modulating factor
 max_exp = 1.0  # Maximum value for the exponential modulating factor
-tau_exp = 0.2  # Time constant for the exponential modulating factor
+H_thres = 0.2  # HIV threshold
 Sigma = 0.01/365 # Influx
-delay = jnp.array([20.]) # Delay for the Hazard
+#delay = jnp.array([20.]) # Delay for the Hazard # TODO delte later if not used
 # additional notes:
 # mu is the same as in HIV model
 ##---------------------------------------------
 
-
+# TODO check if everywhere in the code we only use these and not the global ones above
 args = {
-    "beta_HIV": beta_HIV,
     "N_0": N_0,
     "mu": mu,
     "Omega": Omega,
@@ -168,30 +158,26 @@ args = {
     "lambda_0": lambda_0,
     "lambda_P": lambda_P,
     "m_function": m_function,
+    "m_max": m_max,
     "min_exp": min_exp,
     "max_exp": max_exp,
-    "tau_exp": tau_exp,
-    "m_eps": m_eps,
+    "H_thres": H_thres,
     "Sigma": Sigma,
-    "scaling_factor_m_eps": scaling_factor_m_eps,
+    "beta_STI": beta_STI,
     "gamma_STI": gamma_STI,
-    "gammaT_STI": gammaT_STI,
-    "contact": contact,
-    "delay": delay,
+    "gammaT_STI": gammaT_STI
     }
 
 
 
-
+# TODO thisn logging stuff is also done in the beginning already, delete here??
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 # Global flag to track logging
 logged_exp_logis = False
 logged_tau = False
 
-# TODO check if this is correct
 def m(args, y):
     """
     Exponential function with three parameters: minimum value, maximum value, and rate/tau.
@@ -209,20 +195,17 @@ def m(args, y):
     if not logged_exp_logis:
         logger.info("Using exponential function to calculate m")
         logger.info(
-            "Parameters: min_exp = %s, max_exp = %s, tau_exp = %s",
+            "Parameters: min_exp = %s, max_exp = %s",
             args["min_exp"],
             args["max_exp"],
-            args["tau_exp"] * args["scaling_factor_m_eps"],
         )
         logged_exp_logis = True
+    return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-hazard(y, args) / args["H_thres"]))
 
-    return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-hazard(y, args) / (args["tau_exp"] * args["scaling_factor_m_eps"])))
 
-# TODO check if this is correct
-# TODO is this equal to J^P in ganna's paper?
-# TODO this is the J^P_l matrix from the paper, right? If yes, we should write that as a comment
-# TODO this is the force of infection per year right, check if this works with our time step we use for integration or if we need some factor 365 or so
+# TODO normalization with N_0 corect?
 def foi_HIV(y, args):
+    # this is the matrix named J^P_l in the paper from GannaRozhnova
     """
     Computes the force of infection for HIV.
     Args:
@@ -236,11 +219,11 @@ def foi_HIV(y, args):
     I_eff = args["epsilonP"]*y["IP"] \
           + jnp.dot(args["h"], jnp.array([y["I1"], y["I2"], y["I3"], y["I4"]])) \
           + args["epsilon"]*(y["A1"] + y["A2"] + y["A3"] + y["A4"])
-    foi = args["Lambda"] * args["c"] * contact_matrix(args) @ I_eff
+    foi = args["Lambda"] * args["c"] * contact_matrix(args) @ (I_eff/args["N_0"])
 
     return foi
 
-# TODO check if this is correct
+
 def foi_STI(y, args):
     """
     Calculates the force of infection for STIs.
@@ -254,26 +237,18 @@ def foi_STI(y, args):
     """
 
     I_eff = y["Ia_STI"] + y["Is_STI"]
-    foi = (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(args) @ I_eff
-    # TODO: dont we also need to multiply with beta_STI here?
-    # TODO: do we need contact matrix here? (LM: I think yes, as it is the same as in HIV model because we have the different risk groups)
-    
+    foi = args["beta_STI"] * (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(args) @ I_eff
     return foi
 
-
-# TODO check if calculation is correct (LM: it is correct apart from the todos)
 # TODO: make sure it is correctly orientated
-
 def contact_matrix(args):           
-    # this is the matrix names M_ll' in the paper from GannaRozhnova
+    # this is the matrix named M_ll' in the paper from GannaRozhnova
     mixing = args["omega"] * jnp.tile(args["c"]*args["N_0"], [4,1]) / jnp.dot(args["c"], args["N_0"])
-    # TODO I think the args["N0"] here are wrong, it should be the sum of the compartments in each risk group, right?
     # TODO chekc if in the tile fct it should really be [4,1] and not [1,4]
     diagonal = (1-args["omega"])*jnp.identity(4)
 
     return mixing + diagonal
 
-# TODO discuss if we really only want A compartments or also others (LM: I think only A is best as these best reflect the known cases)
 def hazard(y, args):
     """
     Calculates the hazard from the HIV model used for risk-perception.
@@ -294,8 +269,6 @@ def prep_fraction(y):
     """
     return jnp.sum( jnp.array([y["SP"], y["IP"]]) )
 
-# TODO check if this is correct
-# TODO how do we get beta_HIV from HIV model? WE should kick out args["beta_HIV"] and use the one from the HIV model
 def lambda_a(y, args):
     """
     Calculates STI testing rate for asymtomatic infected.
@@ -303,9 +276,7 @@ def lambda_a(y, args):
     Returns:
         Array of rates with dimension [1, risk groups].
     """
-    risk_induced_testing = args["contact"] * (1 - m(args, y)) * args["beta_HIV"] * hazard(y, args) * (1 - prep_fraction(y))
-    # TODO do we need the args["contact"] here? or should we delet it altogteher and work with the contact_matrix?
-    # TODO related to the above todo: does the contact matrix also include beta_HIV?
+    risk_induced_testing = jnp.multiply(args["Lambda"], args["c"]) * (1 - m(args, y)) * hazard(y, args) * (1 - prep_fraction(y))
     prep_induced_testing = args["lambda_P"] * prep_fraction(y)
     return risk_induced_testing + prep_induced_testing
 
@@ -321,7 +292,6 @@ def lambda_s(y, args):
 
 
 
-# TODO check if this is correct. UPDATE: Everything checked and correct, but there is a TODO for the STI influx
 def main_model(t, y, args):
     cm = icomo.CompModel(y)  # Initialize the compartmental model
 
@@ -348,19 +318,20 @@ def main_model(t, y, args):
     add_flows(Is[:-1], As[:-1], args["taus"])
     add_flows(As[:-1], Is[:-1], args["phis"])
 
-    # TODO add hazard for HIV? discuss
-    # TODO add influx for HIV? discuss
+    # TODO maybe add hazard for HIV in the future, but leave out for now
+    # TODO maybe add influx for HIV in the future, but leave out for now
 
 
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
-    # TODO: influx is missing! (everything else is fine)
     cm.flow("S_STI",  "Ia_STI", (args["asymptomatic"])   * foi_STI(y, args))     # Susceptible to asymptomatic
     cm.flow("S_STI",  "Is_STI", (1-args["asymptomatic"]) * foi_STI(y, args))     # Susceptible to symptomatic
     cm.flow("Ia_STI", "S_STI",  args["gamma_STI"])                               # Asymptomatic to susceptible (recovery)
     cm.flow("Ia_STI", "T_STI",  lambda_a(y,args))                                # Asymptomatic to tested and treatment
     cm.flow("Is_STI", "T_STI",  lambda_s(y,args))                                # Symptomatic to tested and treatment
     cm.flow("T_STI",  "S_STI",  args["gammaT_STI"])                              # Treatment to susceptible (immunity loss)
-
+    cm.dy["S_STI"] -= args["Sigma"]                                              # Influx
+    cm.dy["Ia_STI"] += args["asymptomatic"] * args["Sigma"]                      # Influx
+    cm.dy["Is_STI"] += (1-args["asymptomatic"]) * args["Sigma"]                  # Influx
 
     # Vital dynamics-----------------------------------------------------------------------------------------------------------------------------------------------
     # both HIV and STI 
@@ -368,7 +339,6 @@ def main_model(t, y, args):
         if comp not in ["D", "H"]:
             cm.dy[comp] -= mu * y[comp] # deaths
     for comp in ["S", "S_STI"]:
-        # TODO: recruitment really at rate mu? In th eSTI it should be Phi, but that could be equal mu i think. Check this.
         cm.dy[comp] += mu*args["N_0"] # recruitment ("births")
 
 

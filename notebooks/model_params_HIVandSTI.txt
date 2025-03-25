@@ -15,7 +15,7 @@ args = {
     "lambda_P": 1 / 360,  # Infection rate due to HIV prevalence [Checked]
     "lambda_ARV": 0.3567,  # ARV therapy uptake rate
     "psi": 0.85,  # Proportion of asymptomatic infections [Checked]
-    "H_thres": 0.1,  # HIV threshold
+    "H_thres": 0.2,  # HIV threshold
     "tau": 30.0,  # Delay for behavioral feedback 
     "c": 50.0,  # Scaling factor for HIV interaction term
     "min_exp": 0.0,  # Minimum value for the exponential modulating factor
