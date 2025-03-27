@@ -41,6 +41,7 @@ y0 = {
     "Ia_STI": 0.15 * N_0,    # Infected asymptomatic
     "Is_STI": 0.15 * N_0,    # Infected symptomatic
     "T_STI":  0.05 * N_0,    # Tested and treated
+    "D_STI":  0.0  * N_0,    # Deceased from STI
 
     # Hazard
     #"H": [0.0, 0.0, 0.0, 0.0] * N_0, # hazard
@@ -212,7 +213,7 @@ def foi_HIV(y, args):
     I_eff = args["epsilonP"]*y["IP"] \
           + jnp.dot(args["h"], jnp.array([y["I1"], y["I2"], y["I3"], y["I4"]])) \
           + args["epsilon"]*(y["A1"] + y["A2"] + y["A3"] + y["A4"])
-    foi = args["Lambda"] * args["c"] * contact_matrix(args) @ (I_eff/args["N_0"])
+    foi = args["Lambda"] * args["c"] * contact_matrix(y, args) @ (I_eff/alive_fraction_HIV(y))
 
     return foi
 
@@ -230,12 +231,12 @@ def foi_STI(y, args):
     """
 
     I_eff = y["Ia_STI"] + y["Is_STI"]
-    foi = args["beta_STI"] * (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(args) @ I_eff
+    foi = args["beta_STI"] * (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(y, args) @ (I_eff/alive_fraction_STI(y))
     return foi
 
-def contact_matrix(args):           
+def contact_matrix(y, args):           
     # this is the matrix named M_ll' in the paper from GannaRozhnova
-    mixing = args["omega"] * jnp.tile(args["c"]*args["N_0"], [4,1]) / jnp.dot(args["c"], args["N_0"])
+    mixing = args["omega"] * jnp.tile(args["c"]*alive_fraction_HIV(y), [4,1]) / jnp.dot(args["c"], alive_fraction_HIV(y))
     diagonal = (1-args["omega"])*jnp.identity(4)
 
     return mixing + diagonal
@@ -259,6 +260,24 @@ def prep_fraction(y):
         Value as float64.
     """
     return jnp.sum( jnp.array([y["SP"], y["IP"]]) )
+
+def alive_fraction_HIV(y):
+    """
+    Calculates fraction of people alive in the HIV model.
+
+    Returns:
+        Value as float64.
+    """
+    return jnp.sum( jnp.array([y[comp] for comp in ["S", "SP", "I1", "IP", "I2", "I3", "I4", "A1", "A2", "A3", "A4"]]) )
+
+def alive_fraction_STI(y):
+    """
+    Calculates fraction of people alive in the STI model.
+
+    Returns:
+        Value as float64.
+    """
+    return jnp.sum( jnp.array([y[comp] for comp in ["S_STI", "Ia_STI", "Is_STI", "T_STI"]]) )
 
 def lambda_a(y, args):
     """
@@ -294,7 +313,6 @@ def main_model(t, y, args):
     # list of all compartments in one category
     Is = ["I1", "I2", "I3", "I4", "D"]
     As = ["A1", "A2", "A3", "A4", "D"]
-
     
     # HIV dynamics-------------------------------------------------------------------------------------------------------------------------------
     cm.flow("S", "I1", foi_HIV(y, args))                       
@@ -316,18 +334,22 @@ def main_model(t, y, args):
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
     cm.flow("S_STI",  "Ia_STI", (args["Psi"])   * foi_STI(y, args))     # Susceptible to asymptomatic
     cm.flow("S_STI",  "Is_STI", (1-args["Psi"]) * foi_STI(y, args))     # Susceptible to symptomatic
-    cm.flow("Ia_STI", "S_STI",  args["gamma_STI"])                               # Asymptomatic to susceptible (recovery)
-    cm.flow("Ia_STI", "T_STI",  lambda_a(y,args))                                # Asymptomatic to tested and treatment
-    cm.flow("Is_STI", "T_STI",  lambda_s(y,args))                                # Symptomatic to tested and treatment
-    cm.flow("T_STI",  "S_STI",  args["gammaT_STI"])                              # Treatment to susceptible (immunity loss)
-    cm.dy["S_STI"] -= args["Sigma"]                                              # Influx
+    cm.flow("Ia_STI", "S_STI",  args["gamma_STI"])                      # Asymptomatic to susceptible (recovery)
+    cm.flow("Ia_STI", "T_STI",  lambda_a(y,args))                       # Asymptomatic to tested and treatment
+    cm.flow("Is_STI", "T_STI",  lambda_s(y,args))                       # Symptomatic to tested and treatment
+    cm.flow("T_STI",  "S_STI",  args["gammaT_STI"])                     # Treatment to susceptible (immunity loss)
+    cm.dy["S_STI"] -= args["Sigma"]                                     # Influx
     cm.dy["Ia_STI"] += args["Psi"] * args["Sigma"]                      # Influx
     cm.dy["Is_STI"] += (1-args["Psi"]) * args["Sigma"]                  # Influx
+    # INFO: Deaths from HIV also now in STI, however only susceptible people die
+    cm.flow("S_STI", "D_STI", args["rhos"][-1] * y["I4"] / y["S_STI"])  # Deaths from HIV also have to be included in STI model
+    cm.flow("S_STI", "D_STI", args["gammas"][-1] * y["A4"] / y["S_STI"])# Deaths from HIV also have to be included in STI model
+
 
     # Vital dynamics-----------------------------------------------------------------------------------------------------------------------------------------------
     # both HIV and STI 
     for comp in cm.dy.keys(): 
-        if comp not in ["D", "H"]:
+        if comp not in ["H"]:
             cm.dy[comp] -= args["mu"] * y[comp] # deaths
     for comp in ["S", "S_STI"]:
         cm.dy[comp] += args["mu"] * args["N_0"] # recruitment ("births")
