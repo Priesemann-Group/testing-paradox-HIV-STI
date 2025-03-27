@@ -43,7 +43,7 @@ y0 = {
     "T_STI":  0.05 * N_0,    # Tested and treated
 
     # Hazard
-    "H": [0.0, 0.0, 0.0, 0.0] * N_0, # hazard
+    #"H": [0.0, 0.0, 0.0, 0.0] * N_0, # hazard
     # TODO: maybe kick out and just use A or I?
 }
 all_HIV_compartments = ["S", "SP", "I1", "IP", "I2", "I3", "I4", "A1", "A2", "A3", "A4", "D"]
@@ -93,7 +93,7 @@ def duration2rate(x):
     return 1 / x / 365.
 
 # Parameters ------------------------------------------------------------------------------
-# TODO: compare all params with paper and check if they are correctly interpreted, especially if everything is divided by 365 where needed and if the fraction2rate etc is used correctly
+
 # HIV params---------------------------------------------
 # Parameters we have to decide
 k_on = fraction2rate(0.3)   # annual PrEP uptake rate
@@ -115,19 +115,15 @@ Lambda = jnp.array([0.25]*4) # transmission prob. per partnership
 omega = 0.5 # mixing parameter, (0: assortative, 1: proportionate mixing)
 
 
-
-# TODO: also check if these are correct, and see if names are same as in paper (e.g. asymptomatic)
 #STI params---------------------------------------------
-m_function = "exponential",  # Modulating function 
 beta_STI = 0.0016 * 7.0  # STI infection rate 
 gamma_STI = duration2rate(1.32)  # Recovery rate from asymptomatic STI per day 
 gammaT_STI = 1.0 / 7.0  # Recovery rate from treated STI per day [Checked, try with 1/7]
 lambda_0 = 1 / 14.0  # Baseline test rate for symptomatic STI 
 lambda_P = 2 / 365  # Testing rate due to HIV prevalence 
-asymptomatic = 0.85  # Proportion of asymptomatic infections 
-m_max = 0.8  # Maximum modulating factor
-min_exp = 0.0  # Minimum value for the exponential modulating factor
-max_exp = 1.0  # Maximum value for the exponential modulating factor
+Psi = 0.85  # Proportion of asymptomatic infections 
+m_max = 1  # Maximum value for the exponential modulating factor
+m_min = 0.0  # Minimum value for the exponential modulating factor
 H_thres = 0.2  # HIV threshold
 Sigma = 0.01/365 # Influx
 #delay = jnp.array([20.]) # Delay for the Hazard # TODO delte later if not used
@@ -135,7 +131,6 @@ Sigma = 0.01/365 # Influx
 # mu is the same as in HIV model
 ##---------------------------------------------
 
-# TODO check if everywhere in the code we only use these and not the global ones above
 args = {
     "N_0": N_0,
     "mu": mu,
@@ -153,14 +148,13 @@ args = {
     "gammas": gammas,
     "k_on": k_on,
     "k_off": k_off,
-    "asymptomatic": asymptomatic,
+    "Psi": Psi,
     "beta_STI": beta_STI,
     "lambda_0": lambda_0,
     "lambda_P": lambda_P,
-    "m_function": m_function,
     "m_max": m_max,
-    "min_exp": min_exp,
-    "max_exp": max_exp,
+    "m_min": m_min,
+    "m_max": m_max,
     "H_thres": H_thres,
     "Sigma": Sigma,
     "beta_STI": beta_STI,
@@ -183,7 +177,7 @@ def m(args, y):
     Exponential function with three parameters: minimum value, maximum value, and rate/tau.
 
     Args:
-    args (dict): A dictionary containing the parameters 'H', 'min_exp', 'max_exp', and 'tau_exp'.
+    args (dict): A dictionary containing the parameters 'H', 'm_min', 'm_max', and 'tau_exp'.
     H (float): The current value of 'H'.
 
     Returns:
@@ -195,15 +189,14 @@ def m(args, y):
     if not logged_exp_logis:
         logger.info("Using exponential function to calculate m")
         logger.info(
-            "Parameters: min_exp = %s, max_exp = %s",
-            args["min_exp"],
-            args["max_exp"],
+            "Parameters: m_min = %s, m_max = %s",
+            args["m_min"],
+            args["m_max"],
         )
         logged_exp_logis = True
-    return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-hazard(y, args) / args["H_thres"]))
+    return args["m_min"] + (args["m_max"] - args["m_min"]) * (1 - jnp.exp(-hazard(y, args) / args["H_thres"]))
 
 
-# TODO normalization with N_0 corect?
 def foi_HIV(y, args):
     # this is the matrix named J^P_l in the paper from GannaRozhnova
     """
@@ -240,11 +233,9 @@ def foi_STI(y, args):
     foi = args["beta_STI"] * (1 - m(args, y)*(1 - prep_fraction(y)) ) * contact_matrix(args) @ I_eff
     return foi
 
-# TODO: make sure it is correctly orientated
 def contact_matrix(args):           
     # this is the matrix named M_ll' in the paper from GannaRozhnova
     mixing = args["omega"] * jnp.tile(args["c"]*args["N_0"], [4,1]) / jnp.dot(args["c"], args["N_0"])
-    # TODO chekc if in the tile fct it should really be [4,1] and not [1,4]
     diagonal = (1-args["omega"])*jnp.identity(4)
 
     return mixing + diagonal
@@ -323,23 +314,23 @@ def main_model(t, y, args):
 
 
     # STI dynamics-------------------------------------------------------------------------------------------------------------------------------------------------
-    cm.flow("S_STI",  "Ia_STI", (args["asymptomatic"])   * foi_STI(y, args))     # Susceptible to asymptomatic
-    cm.flow("S_STI",  "Is_STI", (1-args["asymptomatic"]) * foi_STI(y, args))     # Susceptible to symptomatic
+    cm.flow("S_STI",  "Ia_STI", (args["Psi"])   * foi_STI(y, args))     # Susceptible to asymptomatic
+    cm.flow("S_STI",  "Is_STI", (1-args["Psi"]) * foi_STI(y, args))     # Susceptible to symptomatic
     cm.flow("Ia_STI", "S_STI",  args["gamma_STI"])                               # Asymptomatic to susceptible (recovery)
     cm.flow("Ia_STI", "T_STI",  lambda_a(y,args))                                # Asymptomatic to tested and treatment
     cm.flow("Is_STI", "T_STI",  lambda_s(y,args))                                # Symptomatic to tested and treatment
     cm.flow("T_STI",  "S_STI",  args["gammaT_STI"])                              # Treatment to susceptible (immunity loss)
     cm.dy["S_STI"] -= args["Sigma"]                                              # Influx
-    cm.dy["Ia_STI"] += args["asymptomatic"] * args["Sigma"]                      # Influx
-    cm.dy["Is_STI"] += (1-args["asymptomatic"]) * args["Sigma"]                  # Influx
+    cm.dy["Ia_STI"] += args["Psi"] * args["Sigma"]                      # Influx
+    cm.dy["Is_STI"] += (1-args["Psi"]) * args["Sigma"]                  # Influx
 
     # Vital dynamics-----------------------------------------------------------------------------------------------------------------------------------------------
     # both HIV and STI 
     for comp in cm.dy.keys(): 
         if comp not in ["D", "H"]:
-            cm.dy[comp] -= mu * y[comp] # deaths
+            cm.dy[comp] -= args["mu"] * y[comp] # deaths
     for comp in ["S", "S_STI"]:
-        cm.dy[comp] += mu*args["N_0"] # recruitment ("births")
+        cm.dy[comp] += args["mu"] * args["N_0"] # recruitment ("births")
 
 
     # TODO delete this later
