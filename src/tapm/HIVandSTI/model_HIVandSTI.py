@@ -23,17 +23,17 @@ if (N_0.sum() != 1):
 # Initial state of the compartments stratified by risk group
 y0 = {
     # HIV compartments
-    "S":  0.3785* N_0,    # Susceptible
-    "SP": 0.3785* N_0,    # Susceptible on PrEP
-    "I1": 0.001 * N_0,    # Infected in stage 1
-    "IP": 0.001 * N_0,    # Infected in stage 1 on PrEP
-    "I2": 0.01  * N_0,    # Infected in stage 2
-    "I3": 0.01  * N_0,    # Infected in stage 3
-    "I4": 0.001 * N_0,    # Infected in stage 4
-    "A1": 0.1   * N_0,    # Infected in stage 1 on ART
-    "A2": 0.1   * N_0,    # Infected in stage 2 on ART
-    "A3": 0.01  * N_0,    # Infected in stage 3 on ART
-    "A4": 0.01  * N_0,    # Infected in stage 4 on ART
+    "S":  0.42* N_0,    # Susceptible
+    "SP": 0.42* N_0,    # Susceptible on PrEP
+    "I1": 0.0064 * N_0,    # Infected in stage 1
+    "IP": 0.0064 * N_0,    # Infected in stage 1 on PrEP
+    "I2": 0.0064  * N_0,    # Infected in stage 2
+    "I3": 0.0064  * N_0,    # Infected in stage 3
+    "I4": 0.0064  * N_0,    # Infected in stage 4
+    "A1": 0.032   * N_0,    # Infected in stage 1 on ART
+    "A2": 0.032   * N_0,    # Infected in stage 2 on ART
+    "A3": 0.032  * N_0,    # Infected in stage 3 on ART
+    "A4": 0.032  * N_0,    # Infected in stage 4 on ART
     "D":  0.0   * N_0,    # Deceased from HIV
     
     # STI starting values
@@ -48,7 +48,7 @@ y0 = {
     # TODO: maybe kick out and just use A or I?
 }
 all_HIV_compartments = ["S", "SP", "I1", "IP", "I2", "I3", "I4", "A1", "A2", "A3", "A4", "D"]
-all_STI_compartments = ["S_STI", "Ia_STI", "Is_STI", "T_STI"]
+all_STI_compartments = ["S_STI", "Ia_STI", "Is_STI", "T_STI", "D_STI"]
 if not np.isclose(np.sum(np.array([y0[comp] for comp in all_HIV_compartments])), 1):
     logger.error("y_0 does not add up to 1 for HIV.")
 if not np.isclose(np.sum(np.array([y0[comp] for comp in all_STI_compartments])), 1):
