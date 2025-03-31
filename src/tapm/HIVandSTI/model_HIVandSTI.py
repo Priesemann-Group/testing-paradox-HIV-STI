@@ -97,11 +97,14 @@ def duration2rate(x):
 
 # HIV params---------------------------------------------
 # Parameters we have to decide
-k_on = fraction2rate(0.3)   # annual PrEP uptake rate
-k_off = duration2rate(5.0)  # average duration of taking PrEP per year
+# k_on = fraction2rate(0.3)   # annual PrEP uptake rate
+# k_off = duration2rate(5.0)  # average duration of taking PrEP per year
+k_on = jnp.array([0,0,0,-jnp.log(1-0.3) / 365])   # annual PrEP uptake rate
+k_off = jnp.array([0,0,0, 1 / 5.0 / 365])  # average duration of taking PrEP per year
+tau_p = jnp.array([0,0,0,-jnp.log(1-0.95) / 365])     # annual ART uptake rate
 
 # from GannaRozhnova paper (Elimination prospects of the Dutch HIV epidemic)
-tau_p = fraction2rate(0.95)     # annual ART uptake rate
+# tau_p = fraction2rate(0.95)     # annual ART uptake rate
 c = jnp.array([0.13, 1.43, 5.44, 18.21]) / 365.0 # per year, average number of partners in risk group l
 h = jnp.array([0.62, 0.12, 0.642, 0.0]) # infectivity of untreated individuals in stage k of infection
 phis = fraction2rate(0.05)  # per year, annual ART dropout rate
@@ -164,14 +167,6 @@ args = {
     }
 
 
-
-# TODO thisn logging stuff is also done in the beginning already, delete here??
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-# Global flag to track logging
-logged_exp_logis = False
-logged_tau = False
 
 def m(args, y):
     """
@@ -241,6 +236,7 @@ def contact_matrix(y, args):
 
     return mixing + diagonal
 
+
 def hazard(y, args):
     """
     Calculates the hazard from the HIV model used for risk-perception.
@@ -268,7 +264,7 @@ def alive_fraction_HIV(y):
     Returns:
         Value as float64.
     """
-    return jnp.sum( jnp.array([y[comp] for comp in ["S", "SP", "I1", "IP", "I2", "I3", "I4", "A1", "A2", "A3", "A4"]]) )
+    return 1 - jnp.sum(y["D"])
 
 def alive_fraction_STI(y):
     """
@@ -277,7 +273,7 @@ def alive_fraction_STI(y):
     Returns:
         Value as float64.
     """
-    return jnp.sum( jnp.array([y[comp] for comp in ["S_STI", "Ia_STI", "Is_STI", "T_STI"]]) )
+    return 1 - jnp.sum(y["D_STI"])
 
 def lambda_a(y, args):
     """
