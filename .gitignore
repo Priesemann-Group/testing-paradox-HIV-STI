@@ -31,6 +31,7 @@ MANIFEST
 figures/
 results/
 src/tapm.egg-info/
+Fabio/
 
 # Ignore the following file types (.mp4)
 *.mp4
