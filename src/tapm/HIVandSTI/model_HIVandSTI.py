@@ -23,17 +23,17 @@ if (N_0.sum() != 1):
 # Initial state of the compartments stratified by risk group
 y0 = {
     # HIV compartments
-    "S":  0.42* N_0,    # Susceptible
-    "SP": 0.42* N_0,    # Susceptible on PrEP
-    "I1": 0.0064 * N_0,    # Infected in stage 1
-    "IP": 0.0064 * N_0,    # Infected in stage 1 on PrEP
-    "I2": 0.0064  * N_0,    # Infected in stage 2
-    "I3": 0.0064  * N_0,    # Infected in stage 3
-    "I4": 0.0064  * N_0,    # Infected in stage 4
-    "A1": 0.032   * N_0,    # Infected in stage 1 on ART
-    "A2": 0.032   * N_0,    # Infected in stage 2 on ART
-    "A3": 0.032  * N_0,    # Infected in stage 3 on ART
-    "A4": 0.032  * N_0,    # Infected in stage 4 on ART
+    "S":  0.412* N_0,    # Susceptible
+    "SP": 0.412* N_0,    # Susceptible on PrEP
+    "I1": 0.008 * N_0,    # Infected in stage 1
+    "IP": 0.008 * N_0,    # Infected in stage 1 on PrEP
+    "I2": 0.008  * N_0,    # Infected in stage 2
+    "I3": 0.008  * N_0,    # Infected in stage 3
+    "I4": 0.008  * N_0,    # Infected in stage 4
+    "A1": 0.036   * N_0,    # Infected in stage 1 on ART
+    "A2": 0.036   * N_0,    # Infected in stage 2 on ART
+    "A3": 0.036  * N_0,    # Infected in stage 3 on ART
+    "A4": 0.036  * N_0,    # Infected in stage 4 on ART
     "D":  0.0   * N_0,    # Deceased from HIV
     
     # STI starting values
@@ -99,12 +99,12 @@ def duration2rate(x):
 # Parameters we have to decide
 # k_on = fraction2rate(0.3)   # annual PrEP uptake rate
 # k_off = duration2rate(5.0)  # average duration of taking PrEP per year
-k_on = jnp.array([0,0,0,-jnp.log(1-0.3) / 365])   # annual PrEP uptake rate
+# tau_p = fraction2rate(0.95)     # annual ART uptake rate
+k_on = jnp.array([0,0,0,-jnp.log(1-0.5) / 365])   # annual PrEP uptake rate
 k_off = jnp.array([0,0,0, 1 / 5.0 / 365])  # average duration of taking PrEP per year
 tau_p = jnp.array([0,0,0,-jnp.log(1-0.95) / 365])     # annual ART uptake rate
 
 # from GannaRozhnova paper (Elimination prospects of the Dutch HIV epidemic)
-# tau_p = fraction2rate(0.95)     # annual ART uptake rate
 c = jnp.array([0.13, 1.43, 5.44, 18.21]) / 365.0 # per year, average number of partners in risk group l
 h = jnp.array([0.62, 0.12, 0.642, 0.0]) # infectivity of untreated individuals in stage k of infection
 phis = fraction2rate(0.05)  # per year, annual ART dropout rate
@@ -338,8 +338,8 @@ def main_model(t, y, args):
     cm.dy["Ia_STI"] += args["Psi"] * args["Sigma"]                      # Influx
     cm.dy["Is_STI"] += (1-args["Psi"]) * args["Sigma"]                  # Influx
     # INFO: Deaths from HIV also now in STI, however only susceptible people die
-    cm.flow("S_STI", "D_STI", args["rhos"][-1] * y["I4"] / y["S_STI"])  # Deaths from HIV also have to be included in STI model
-    cm.flow("S_STI", "D_STI", args["gammas"][-1] * y["A4"] / y["S_STI"])# Deaths from HIV also have to be included in STI model
+    #cm.flow("S_STI", "D_STI", args["rhos"][-1] * y["I4"] / y["S_STI"])  # Deaths from HIV also have to be included in STI model
+    #cm.flow("S_STI", "D_STI", args["gammas"][-1] * y["A4"] / y["S_STI"])# Deaths from HIV also have to be included in STI model
 
 
     # Vital dynamics-----------------------------------------------------------------------------------------------------------------------------------------------
