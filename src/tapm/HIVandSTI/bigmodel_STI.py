@@ -60,9 +60,9 @@ N_0 = np.array([0.451, 0.353, 0.125, 0.071])
 # k_on = fraction2rate(0.3)   # annual PrEP uptake rate
 # k_off = duration2rate(5.0)  # average duration of taking PrEP per year
 # tau_p = fraction2rate(0.95)     # annual ART uptake rate
-k_on = jnp.array([0,0,0,-jnp.log(1-0.5) / 365])   # annual PrEP uptake rate
-k_off = jnp.array([0,0,0, 1 / 5.0 / 365])  # average duration of taking PrEP per year
-tau_p = jnp.array([0,0,0,-jnp.log(1-0.95) / 365])     # annual ART uptake rate
+#k_on = jnp.array([0,0,0,-jnp.log(1-0.5) / 365])   # annual PrEP uptake rate
+#k_off = jnp.array([0,0,0, 1 / 5.0 / 365])  # average duration of taking PrEP per year
+#tau_p = jnp.array([0,0,0,-jnp.log(1-0.95) / 365])     # annual ART uptake rate
 
 # from GannaRozhnova paper (Elimination prospects of the Dutch HIV epidemic)
 c_hiv = jnp.array([0.13, 1.43, 5.44, 18.21]) / 365.0 # per year, average number of partners in risk group l
@@ -99,7 +99,8 @@ sets_of_c = jnp.array([
     [15.0,  40.0,  120.0,  203.0],
     [10.0,  38.0,  141.3, 203.0],
 ])
-c = sets_of_c[1]*N_0
+#c = sets_of_c[1]*N_0
+c = np.array([50.0, 50.0, 50.0, 50.0]) #* N_0
 #H = 5.0 # HIV hazard
 #P = 50.0 # PrEP fraction
 
@@ -117,11 +118,11 @@ args = {
     "omega": omega,
     "phis": phis,
     "taus": taus,
-    "tau_p": tau_p,
+    #"tau_p": tau_p,
     "rhos": rhos,
     "gammas": gammas,
-    "k_on": k_on,
-    "k_off": k_off,
+    #"k_on": k_on,
+    #"k_off": k_off,
     "Psi": Psi,
     "beta_STI": beta_STI,
     "lambda_0": lambda_0,
@@ -216,9 +217,11 @@ def foi_STI(y, args):
 
 def contact_matrix(y, args):           
     # this is the matrix named M_ll' in the paper from GannaRozhnova
-    mixing = args["omega"] * jnp.tile(args["c_hiv"]*N_0, [4,1]) / jnp.dot(args["c_hiv"], N_0) 
-    diagonal = (1-args["omega"])*jnp.identity(4)
-    contact_matrix = mixing + diagonal
+    #mixing = args["omega"] * jnp.tile(args["c_hiv"]*N_0, [4,1]) / jnp.dot(args["c_hiv"], N_0) 
+    #diagonal = (1-args["omega"])*jnp.identity(4)
+    #contact_matrix = mixing + diagonal
+
+    contact_matrix = jnp.ones((4, 4))  # Initialize a 4x4 matrix with zeros
 
     # Normalize by max eigenvalue
     eigvals = jnp.linalg.eigvals(contact_matrix)
@@ -287,6 +290,12 @@ def main_model(t, y, args):
     cm.dy["S_STI"] -= args["Sigma"]                                     # Influx
     cm.dy["Ia_STI"] += args["Psi"] * args["Sigma"]                      # Influx
     cm.dy["Is_STI"] += (1-args["Psi"]) * args["Sigma"]                  # Influx
+    # Vital dynamics
+    cm.dy["S_STI"] += args["mu"]
+    cm.dy["Ia_STI"] -= args["mu"] * cm.dy["Ia_STI"]
+    cm.dy["Is_STI"] -= args["mu"] * cm.dy["Is_STI"]
+    cm.dy["T_STI"] -= args["mu"] * cm.dy["T_STI"]
+    cm.dy["S_STI"] -= args["mu"] * cm.dy["S_STI"]
 
 
 
