@@ -6,6 +6,7 @@ import numpy as np
 import icomo
 import jax.numpy as jnp
 import logging
+from jax import debug
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -90,7 +91,7 @@ m_max = 1  # Maximum value for the exponential modulating factor
 m_min = 0.0  # Minimum value for the exponential modulating factor
 H_thres = 0.2  # HIV threshold
 Sigma = 0.01/365 # Influx
-#c = 50 # 1.65 to 203
+# c = 50 # 1.65 to 203
 beta_HIV = 0.6341 # HIV infection rate 
 sets_of_c = jnp.array([
     [31.0,  40.0,   60.0,  203.0],
@@ -99,8 +100,8 @@ sets_of_c = jnp.array([
     [15.0,  40.0,  120.0,  203.0],
     [10.0,  38.0,  141.3, 203.0],
 ])
-#c = sets_of_c[1]*N_0
-c = np.array([50.0, 50.0, 50.0, 50.0]) #* N_0
+c = sets_of_c[1]*N_0
+# c = np.array([50.0, 50.0, 50.0, 50.0]) #* N_0
 #H = 5.0 # HIV hazard
 #P = 50.0 # PrEP fraction
 
@@ -195,7 +196,8 @@ def m(args, y):
             args["m_max"],
         )
         logged_exp_logis = True
-    return args["m_min"] + (args["m_max"] - args["m_min"]) * (1 - jnp.exp(-hazard(y, args) / args["H_thres"]))
+    res = args["m_min"] + (args["m_max"] - args["m_min"]) * (1 - jnp.exp(-hazard(y, args) / args["H_thres"]))
+    return res
 
 
 
@@ -217,11 +219,11 @@ def foi_STI(y, args):
 
 def contact_matrix(y, args):           
     # this is the matrix named M_ll' in the paper from GannaRozhnova
-    #mixing = args["omega"] * jnp.tile(args["c_hiv"]*N_0, [4,1]) / jnp.dot(args["c_hiv"], N_0) 
-    #diagonal = (1-args["omega"])*jnp.identity(4)
-    #contact_matrix = mixing + diagonal
+    # mixing = args["omega"] * jnp.tile(args["c_hiv"]*N_0, [4,1]) / jnp.dot(args["c_hiv"], N_0) 
+    # diagonal = (1-args["omega"])*jnp.identity(4)
+    # contact_matrix = mixing + diagonal
 
-    contact_matrix = jnp.ones((4, 4))  # Initialize a 4x4 matrix with zeros
+    contact_matrix = jnp.ones((4,4))  # Initialize a 4x4 matrix with zeros
 
     # Normalize by max eigenvalue
     eigvals = jnp.linalg.eigvals(contact_matrix)
@@ -291,11 +293,9 @@ def main_model(t, y, args):
     cm.dy["Ia_STI"] += args["Psi"] * args["Sigma"]                      # Influx
     cm.dy["Is_STI"] += (1-args["Psi"]) * args["Sigma"]                  # Influx
     # Vital dynamics
-    cm.dy["S_STI"] += args["mu"]
-    cm.dy["Ia_STI"] -= args["mu"] * cm.dy["Ia_STI"]
-    cm.dy["Is_STI"] -= args["mu"] * cm.dy["Is_STI"]
-    cm.dy["T_STI"] -= args["mu"] * cm.dy["T_STI"]
-    cm.dy["S_STI"] -= args["mu"] * cm.dy["S_STI"]
+    cm.flow("Ia_STI", "S_STI", args["mu"])  # Death/removal from asymptomatic
+    cm.flow("Is_STI", "S_STI", args["mu"])  # Death/removal from symptomatic
+    cm.flow("T_STI", "S_STI", args["mu"])  # Death/removal from treatment
 
 
 
