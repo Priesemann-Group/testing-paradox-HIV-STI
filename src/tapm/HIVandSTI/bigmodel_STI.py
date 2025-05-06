@@ -92,7 +92,7 @@ m_min = 0.0  # Minimum value for the exponential modulating factor
 H_thres = 0.2  # HIV threshold
 Sigma = 0.01/365 # Influx
 # c = 50 # 1.65 to 203
-beta_HIV = 0.6341 # HIV infection rate 
+beta_HIV = 0.6341/365 # HIV infection rate 
 sets_of_c = jnp.array([
     [31.0,  40.0,   60.0,  203.0],
     [29.0,  38.0,   73.0,  203.0],
@@ -100,8 +100,8 @@ sets_of_c = jnp.array([
     [15.0,  40.0,  120.0,  203.0],
     [10.0,  38.0,  141.3, 203.0],
 ])
-c = sets_of_c[1]*N_0
-# c = np.array([50.0, 50.0, 50.0, 50.0]) #* N_0
+c = sets_of_c[2]
+
 #H = 5.0 # HIV hazard
 #P = 50.0 # PrEP fraction
 
@@ -161,17 +161,11 @@ y0 = {
 
 }
 all_STI_compartments = ["S_STI", "Ia_STI", "Is_STI", "T_STI"]
-# if not np.isclose(np.sum(np.array([y0[comp] for comp in all_HIV_compartments])), 1):
-#     logger.error("y_0 does not add up to 1 for HIV.")
 if not np.isclose(np.sum(np.array([y0[comp] for comp in all_STI_compartments])), 1):
     logger.error("y_0 does not add up to 1 for STI: %s", np.sum(np.array([y0[comp] for comp in all_STI_compartments])))
 
 
 
-#delay = jnp.array([20.]) # Delay for the Hazard # TODO delte later if not used
-# additional notes:
-# mu is the same as in HIV model
-##---------------------------------------------
 
 
 def m(args, y):
@@ -219,11 +213,12 @@ def foi_STI(y, args):
 
 def contact_matrix(y, args):           
     # this is the matrix named M_ll' in the paper from GannaRozhnova
-    # mixing = args["omega"] * jnp.tile(args["c_hiv"]*N_0, [4,1]) / jnp.dot(args["c_hiv"], N_0) 
-    # diagonal = (1-args["omega"])*jnp.identity(4)
-    # contact_matrix = mixing + diagonal
+    mixing = args["omega"] * jnp.tile(args["c_hiv"]*N_0, [4,1]) / jnp.dot(args["c_hiv"], N_0) 
+    diagonal = (1-args["omega"])*jnp.identity(4)
+    contact_matrix = mixing + diagonal
 
-    contact_matrix = jnp.ones((4,4))  # Initialize a 4x4 matrix with zeros
+    # TODO delete this later, just for testing
+    #contact_matrix = jnp.ones((4,4))  # Initialize a 4x4 matrix with zeros
 
     # Normalize by max eigenvalue
     eigvals = jnp.linalg.eigvals(contact_matrix)
@@ -241,7 +236,6 @@ def hazard(y, args):
     Returns:
         Value as float64.
     """
-    # return jnp.sum( jnp.array([y["A1"], y["A2"], y["A3"], y["A4"]]) )
     return args["H"] # Risk perception H will be somehow homogeneous across the population
 
 def prep_fraction(y, args):
@@ -251,7 +245,6 @@ def prep_fraction(y, args):
     Returns:
         Value as float64.
     """
-    # return jnp.sum( jnp.array([y["SP"], y["IP"]]) )
     return args["P"]
 
 
