@@ -19,6 +19,22 @@ def save_results(results, filename):
     np.save(f"../results/{filename}.npy", results)
     logger.info(f"Results saved to ../results/{filename}.npy")
 
+# Load the results from a file
+def load_results(filename):
+    """
+    Load the results from a file.
+
+    Parameters:
+    filename (str): Name of the file to load the results from.
+
+    Returns:
+    dict: Loaded results.
+    """
+    # Load the results from a file
+    results = np.load(f"../results/{filename}.npy", allow_pickle=True).item()
+    logger.info(f"Results loaded from ../results/{filename}.npy")
+    return results
+
 
 # Define a function to read and evaluate the file
 # PD: using np and jnp in calculation of args in HIVandSTI.py (in fraction2rate() etc.)
