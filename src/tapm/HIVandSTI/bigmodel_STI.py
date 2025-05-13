@@ -103,7 +103,7 @@ sets_of_c = jnp.array([
     [2.0, 63.5, 100.0, 200.0],
     [75, 39, 18.5, 2],
 ])
-c = sets_of_c[7]*N_0 # 2, 4, 5, 7
+c = sets_of_c[2] # 2, 5, 7
 
 #H = 5.0 # HIV hazard
 #P = 50.0 # PrEP fraction
