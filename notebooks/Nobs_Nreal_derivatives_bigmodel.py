@@ -19,7 +19,7 @@ betaSTIs = [0.0016*5, 0.0016*7]
 
 # here you have to choose what you want
 onlyplots = False # if True, only plots are generated, if False, first data is generated and then plots
-derivative = "dP" # dP: derivative with respect to PrEP adoption, dH: derivative with respect to risk awareness
+derivative = "dH" # dP: derivative with respect to PrEP adoption, dH: derivative with respect to risk awareness
 
 Ps = np.linspace(0, 1, 201)
 Hs = np.linspace(0, 0.2, 201)
