@@ -104,6 +104,13 @@ sets_of_c = jnp.array([
     [75, 39, 18.5, 2],
 ])
 c = sets_of_c[2] # 2, 5, 7
+sets_of_r = jnp.array([
+    [1.0,   1.0,    1.0,    1.0     ],
+    [1.5,   0.8,    0.3,    0.05    ],
+    [1.2,   1.1,    0.5,    0.113   ],
+    [0.5,   0.8,    2.0,    3.41    ]
+])
+r = sets_of_r[2] 
 
 #H = 5.0 # HIV hazard
 #P = 50.0 # PrEP fraction
@@ -114,6 +121,7 @@ args = {
     "mu": mu,
     "Omega": Omega,
     "c": c,
+    "r": r,
     "c_hiv": c_hiv,
     "h": h,
     "epsilon": epsilon,
@@ -140,6 +148,7 @@ args = {
     "gamma_STI": gamma_STI,
     "gammaT_STI": gammaT_STI,
     "beta_HIV": beta_HIV,
+
     #"H": H,
     #"P": P
     }
@@ -248,7 +257,7 @@ def prep_fraction(y, args):
     Returns:
         Value as float64.
     """
-    return args["P"]
+    return args["P"]*args["r"]
 
 
 def lambda_a(y, args):

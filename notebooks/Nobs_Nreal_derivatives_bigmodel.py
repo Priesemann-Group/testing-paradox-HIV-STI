@@ -19,7 +19,27 @@ betaSTIs = [0.0016*5, 0.0016*7]
 
 # here you have to choose what you want
 onlyplots = False # if True, only plots are generated, if False, first data is generated and then plots
-derivative = "dH" # dP: derivative with respect to PrEP adoption, dH: derivative with respect to risk awareness
+derivative = "dP" # dP: derivative with respect to PrEP adoption, dH: derivative with respect to risk awareness
+which_r = 0
+which_c = 7
+
+sets_of_c = jnp.array([
+    [31.0,  40.0,   60.0,  203.0],
+    [29.0,  38.0,   73.0,  203.0],
+    [14.0,  24.0,  167.0,  203.0], #2
+    [15.0,  40.0,  120.0,  203.0],
+    [10.0,  38.0,  141.3, 203.0],
+    [2.0, 80.0, 53.3, 200.0],
+    [2.0, 63.5, 100.0, 200.0], #6
+    [75, 39, 18.5, 2], #7
+])
+sets_of_r = jnp.array([
+    [1.0,   1.0,    1.0,    1.0     ],
+    [1.5,   0.8,    0.3,    0.05    ],
+    [1.2,   1.1,    0.5,    0.113   ],
+    [0.5,   0.8,    2.0,    3.41    ]
+])
+
 
 Ps = np.linspace(0, 1, 201)
 Hs = np.linspace(0, 0.2, 201)
@@ -54,6 +74,8 @@ def calc_Nreal(H, P, lambdaP, betaSTI):
     args_mod["P"] = P
     args_mod["lambda_P"] = lambdaP
     args_mod["beta_STI"] = betaSTI
+    args_mod["c"] = sets_of_c[which_c]
+    args_mod["r"] = sets_of_r[which_r]
 
     # run the model fro 80 years (long time to get to steady state)
     output = icomo.diffeqsolve(args = args_mod, ODE = bigmodel_STI.main_model, y0 = y0, ts_out = np.linspace(0, 365*80, 365*80+1), max_steps=365*80+1)
@@ -77,6 +99,8 @@ def calc_Nobs(H, P, lambdaP, betaSTI):
     args_mod["P"] = P
     args_mod["lambda_P"] = lambdaP
     args_mod["beta_STI"] = betaSTI
+    args_mod["c"] = sets_of_c[which_c]
+    args_mod["r"] = sets_of_r[which_r]
 
     # run the model fro 80 years (long time to get to steady state)
     output = icomo.diffeqsolve(args = args_mod, ODE = bigmodel_STI.main_model, y0 = y0, ts_out = np.linspace(0, 365*80, 365*80+1), max_steps=365*80+1)
@@ -119,7 +143,7 @@ if not onlyplots:
             # save stuff as npy files
 
             with open(
-                "../results/Nreal_Nobs_bigmodel_lambdap%g_betaSTI%g_dN%s.npy" %(lambdaP * 360, betaSTI, derivative),"wb",) as f:
+                "../results/Nreal_Nobs_bigmodel_lambdap%g_betaSTI%g_dN%s_r%s_c%s.npy" %(lambdaP * 360, betaSTI, derivative, which_r, which_c),"wb",) as f:
                 np.save(f, Ps)
                 np.save(f, Hs)
                 np.save(f, dNrealdP)
@@ -179,7 +203,7 @@ for i, betaSTI in enumerate(beta_STI_values):
     res = []
     for lambdaP in lambda_P_values:
         # load data
-        with open("../results/Nreal_Nobs_bigmodel_lambdap%g_betaSTI%g_dN%s.npy" %(lambdaP * 360, betaSTI, derivative),"rb") as f:
+        with open("../results/Nreal_Nobs_bigmodel_lambdap%g_betaSTI%g_dN%s_r%s_c%s.npy" %(lambdaP * 360, betaSTI, derivative, which_r, which_c),"rb") as f:
             Ps_plot = np.load(f)
             Hs_plot = np.load(f)
             dNrealdP_plot = np.load(f)
@@ -249,4 +273,4 @@ fig.text(0.03,0.5,"Risk awareness (%)",va="center",rotation="vertical",fontsize=
 #plt.tight_layout()
 #plt.show()
 
-fig.savefig("../figures/final_figure_withinflux_bigmodel_DERIVATIVES_dN%s.pdf" %(derivative), format="pdf", bbox_inches="tight")
+fig.savefig("../figures/final_figure_withinflux_bigmodel_DERIVATIVES_dN%s_r%s_c%s.pdf" %(derivative, which_r, which_c), format="pdf", bbox_inches="tight")
