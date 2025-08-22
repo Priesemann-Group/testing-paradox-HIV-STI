@@ -16,9 +16,11 @@ lambdaPs = [1/360, 2/360, 4/360]
 betaSTIs = [0.0016*5, 0.0016*7]  
 
 # here you have to choose what you want
-onlyplots = True # if True, only plots are generated, if False, first data is generated and then plots
+onlyplots = False # if True, only plots are generated, if False, first data is generated and then plots
 derivative = "dP" # dP: derivative with respect to PrEP adoption, dH: derivative with respect to risk awareness
 prevalence = True # if True, prevalence is calculated, if False, incidence is calculated
+#change influx sigma
+args["Sigma"] = 0.01/365 
 
 # helper stuff, don't change
 if derivative == "dP":
@@ -114,7 +116,7 @@ if not onlyplots:
                 return args["c"] * (1 - m(P, H)) * args["beta_HIV"] * H
 
             def m(P, H):
-                return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-H / args["tau_exp"]))
+                return args["min_exp"] + (args["max_exp"] - args["min_exp"]) * (1 - jnp.exp(-H / args["H_thres"]))
 
             def R0(P, H):
                 return args["psi"] * (betaSTI * (1 - m(P, H) * (1 - P))) / (args["gamma_STI"] + lambdaa(P, H) + args["mu"]) + (1 - args["psi"]) * (betaSTI * (1 - m(P, H) * (1 - P))) / (lambdas(P, H) + args["mu"])
@@ -150,8 +152,8 @@ if not onlyplots:
             # save stuff as npy files
 
             with open(
-                "../results/Nreal_Nobs_values_and_derivatives_lambdap%g_betaSTI%g_%s_dN%s.npy"
-                % (lambdaP * 360, betaSTI, prevorinc, derivative),
+                "../results/Nreal_Nobs_values_and_derivatives_lambdap%g_betaSTI%g_%s_dN%s_sigma%g.npy"
+                % (lambdaP * 360, betaSTI, prevorinc, derivative, args["Sigma"]),
                 "wb",
             ) as f:
                 np.save(f, Ps)
@@ -193,7 +195,7 @@ def discretize_cmaps(cmap, N):
 cmap = discretize_cmaps("viridis", 15)
 
 # load data
-with open("../results/Nreal_Nobs_values_and_derivatives_lambdap%g_betaSTI%g_%s_dN%s.npy" % (1, 0.008, prevorinc, derivative),"rb") as f:
+with open("../results/Nreal_Nobs_values_and_derivatives_lambdap%g_betaSTI%g_%s_dN%s_sigma%g.npy" % (1, 0.008, prevorinc, derivative, args["Sigma"]),"rb") as f:
     Ps_plot = np.load(f)
     Hs_plot = np.load(f)
     dNobsdP_plot = np.load(f)
@@ -255,7 +257,7 @@ results = [[], [], []]
 for i, betaSTI in enumerate(beta_STI_values):
     res = []
     for lambdaP in lambda_P_values:
-        with open( "../results/Nreal_Nobs_values_and_derivatives_lambdap%g_betaSTI%g_%s_dN%s.npy" %(lambdaP * 360, betaSTI, prevorinc, derivative),"rb") as f:
+        with open( "../results/Nreal_Nobs_values_and_derivatives_lambdap%g_betaSTI%g_%s_dN%s_sigma%g.npy" %(lambdaP * 360, betaSTI, prevorinc, derivative, args["Sigma"]),"rb") as f:
             Ps_plot = np.load(f)
             Hs_plot = np.load(f)
             dNobsdP_plot = np.load(f)
@@ -321,4 +323,4 @@ fig.text(0.03,0.5,"Risk awareness (%)",va="center",rotation="vertical",fontsize=
 #plt.tight_layout()
 #plt.show()
 
-fig.savefig("../figures/final_figure_withinflux_DERIVATIVES_%s_dN%s.pdf" %(prevorinc, derivative), format="pdf", bbox_inches="tight")
+fig.savefig("../figures/final_figure_withinflux_DERIVATIVES_%s_dN%s_sigma%g.pdf" %(prevorinc, derivative, args["Sigma"]), format="pdf", bbox_inches="tight")
