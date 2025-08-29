@@ -102,15 +102,16 @@ sets_of_c = jnp.array([
     [2.0, 80.0, 53.3, 200.0],
     [2.0, 63.5, 100.0, 200.0],
     [75, 39, 18.5, 2],
+    [50,50,50,50] #8
 ])
-c = sets_of_c[2] # 2, 5, 7
-sets_of_r = jnp.array([
-    [1.0,   1.0,    1.0,    1.0     ],
-    [1.5,   0.8,    0.3,    0.05    ],
-    [1.2,   1.1,    0.5,    0.113   ],
-    [0.5,   0.8,    2.0,    3.41    ]
+c = sets_of_c[8] # 2, 5, 7
+
+sets_of_xi = jnp.array([
+    [0.0, 0.0, 0.0, 0.0],
+    [0.8, 0.6, 0.4, 0.2], #1
+    [0.2, 0.4, 0.6, 0.8] #2
 ])
-r = sets_of_r[2] 
+xi = sets_of_xi[1]  # risk assimilation (partial mitigation for people on PrEP)
 
 #H = 5.0 # HIV hazard
 #P = 50.0 # PrEP fraction
@@ -121,7 +122,6 @@ args = {
     "mu": mu,
     "Omega": Omega,
     "c": c,
-    "r": r,
     "c_hiv": c_hiv,
     "h": h,
     "epsilon": epsilon,
@@ -148,7 +148,7 @@ args = {
     "gamma_STI": gamma_STI,
     "gammaT_STI": gammaT_STI,
     "beta_HIV": beta_HIV,
-
+    "xi": xi,
     #"H": H,
     #"P": P
     }
@@ -220,7 +220,8 @@ def foi_STI(y, args):
     """
 
     I_eff = y["Ia_STI"] + y["Is_STI"]
-    foi = args["beta_STI"] * (1 - m(args, y)*(1 - prep_fraction(y, args)) ) *contact_matrix(y, args) @ (I_eff/N_0)
+    # foi = args["beta_STI"] * (1 - m(args, y)*(1 - prep_fraction(y, args)) ) *contact_matrix(y, args) @ (I_eff/N_0) # without xi
+    foi = args["beta_STI"] * ((1 - m(args, y))*(1 - prep_fraction(y, args)) + (1-args["xi"]*m(args, y)) * prep_fraction(y, args)) *contact_matrix(y, args) @ (I_eff/N_0)
     return foi
 
 def contact_matrix(y, args):           
@@ -257,7 +258,7 @@ def prep_fraction(y, args):
     Returns:
         Value as float64.
     """
-    return args["P"]*args["r"]
+    return args["P"]
 
 
 def lambda_a(y, args):
